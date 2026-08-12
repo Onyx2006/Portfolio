@@ -244,9 +244,7 @@ const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
   dur: 6 + (i % 5) * 1.4,
 }));
 
-/* ---------------------------------------------------------------------
-   Decorative note glyph — draws a whole / eighth / sixteenth note as SVG.
-   --------------------------------------------------------------------- */
+// Decorative note glyph — draws a whole / eighth / sixteenth note as SVG.
 function NoteGlyph({ type, size }) {
   const w = size, h = size * 1.7;
   if (type === "whole") {
@@ -269,10 +267,8 @@ function NoteGlyph({ type, size }) {
   );
 }
 
-/* ---------------------------------------------------------------------
-   Scattered clickable music notes + a small staff with a drawn melody.
-   Clicking a note plays its pitch via the Web Audio API (do-re-mi...).
-   --------------------------------------------------------------------- */
+// Scattered clickable music notes + a small staff with a drawn melody.
+//Clicking a note plays its pitch via the Web Audio API (do-re-mi...).
 function MusicalBackground({ progress = 0 }) {
   const ctxRef = useRef(null);
   const [ping, setPing] = useState(null);
@@ -398,9 +394,7 @@ function MusicalBackground({ progress = 0 }) {
   );
 }
 
-/* ---------------------------------------------------------------------
-   A short chain of linked blocks, floating in the background.
-   --------------------------------------------------------------------- */
+// A short chain of linked blocks, floating in the background.
 function BlockChain({ top, left, rotate, blocks }) {
   return (
     <div
@@ -421,14 +415,12 @@ function BlockChain({ top, left, rotate, blocks }) {
   );
 }
 
-/* ---------------------------------------------------------------------
-   Traveling border light. Instead of rotating a conic-gradient (which
-   cuts across corners at an angle on non-square boxes), this traces an
-   SVG outline shaped exactly like the card, so the light genuinely
-   glides along the border to the right / clockwise. A few faded copies
-   trail behind the bright leading dash to fake a comet tail that
-   dissolves on the left as the head advances.
-   --------------------------------------------------------------------- */
+// Traveling border light. Instead of rotating a conic-gradient (which
+//cuts across corners at an angle on non-square boxes), this traces an
+// SVG outline shaped exactly like the card, so the light genuinely
+// glides along the border to the right / clockwise. A few faded copies
+// trail behind the bright leading dash to fake a comet tail that
+// dissolves on the left as the head advances.
 function GlowBorder({ radius = 16, className = "", style, children }) {
   const wrapRef = useRef(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -1048,10 +1040,7 @@ function PianoStrip() {
   );
 
 
-  /* -------------------------------------------------------------------
-   * CELLO / LOW STRINGS
-   * ---------------------------------------------------------------- */
-
+  // CELLO / LOW STRINGS
   const playCello = useCallback(
     async (
       noteIndexes,
@@ -1062,39 +1051,31 @@ function PianoStrip() {
     ) => {
 
       try {
-
         const ctx = await getCtx();
-
         const t0 = ctx.currentTime;
-
 
         const lowest =
           PIANO_NOTES[noteIndexes[0]];
 
         if (!lowest) return;
 
-
         const celloBus =
           ctx.createGain();
-
 
         celloBus.gain.setValueAtTime(
           0.0001,
           t0
         );
 
-
         celloBus.gain.exponentialRampToValueAtTime(
           gain,
           t0 + 0.18
         );
 
-
         celloBus.gain.exponentialRampToValueAtTime(
           gain * 0.35,
           t0 + sustain * 0.7
         );
-
 
         celloBus.gain.exponentialRampToValueAtTime(
           0.0001,
@@ -1104,51 +1085,36 @@ function PianoStrip() {
 
         const filter =
           ctx.createBiquadFilter();
-
         filter.type = "lowpass";
-
         filter.frequency.value = 900;
 
-
         celloBus.connect(filter);
-
         filter.connect(ctx.destination);
-
 
         const cello =
           ctx.createOscillator();
 
-
         const celloGain =
           ctx.createGain();
 
-
         cello.type = "triangle";
 
-
         /* One octave below */
-
         cello.frequency.value =
           lowest.freq / 2;
-
 
         celloGain.gain.value =
           0.45;
 
-
         cello.connect(celloGain);
-
         celloGain.connect(celloBus);
 
-
         cello.start(t0);
-
         cello.stop(
           t0 + sustain + 0.1
         );
 
       } catch (e) {
-
         // Cello unavailable
       }
     },
@@ -1156,10 +1122,7 @@ function PianoStrip() {
   );
 
 
-  /* -------------------------------------------------------------------
-   * AMBIENT PAD
-   * ---------------------------------------------------------------- */
-
+  // AMBIENT PAD
   const playPad = useCallback(
     async (
       noteIndexes,
@@ -1170,33 +1133,25 @@ function PianoStrip() {
     ) => {
 
       try {
-
         const ctx = await getCtx();
-
         const t0 = ctx.currentTime;
-
-
         const pad =
           ctx.createGain();
-
 
         pad.gain.setValueAtTime(
           0.0001,
           t0
         );
 
-
         pad.gain.exponentialRampToValueAtTime(
           gain,
           t0 + 0.7
         );
 
-
         pad.gain.exponentialRampToValueAtTime(
           gain * 0.5,
           t0 + sustain * 0.75
         );
-
 
         pad.gain.exponentialRampToValueAtTime(
           0.0001,
@@ -1208,12 +1163,9 @@ function PianoStrip() {
           ctx.createBiquadFilter();
 
         filter.type = "lowpass";
-
         filter.frequency.value = 1200;
 
-
         pad.connect(filter);
-
         filter.connect(ctx.destination);
 
 
@@ -1225,14 +1177,12 @@ function PianoStrip() {
 
             if (!note) return;
 
-
             const osc =
               ctx.createOscillator();
 
 
             const g =
               ctx.createGain();
-
 
             osc.type = "sine";
 
@@ -1243,14 +1193,10 @@ function PianoStrip() {
             g.gain.value =
               0.18;
 
-
             osc.connect(g);
-
             g.connect(pad);
 
-
             osc.start(t0);
-
             osc.stop(
               t0 + sustain
             );
@@ -1258,7 +1204,6 @@ function PianoStrip() {
         );
 
       } catch (e) {
-
         // Pad unavailable
       }
     },
@@ -1266,10 +1211,7 @@ function PianoStrip() {
   );
 
 
-  /* -------------------------------------------------------------------
-   * ORCHESTRA CHORD
-   * ---------------------------------------------------------------- */
-
+  // ORCHESTRA CHORD
   const playOrchestraChord =
     useCallback(
       async (
@@ -1281,7 +1223,6 @@ function PianoStrip() {
       ) => {
 
         /* Piano */
-
         notes.forEach(
           (index) => {
 
@@ -1289,7 +1230,6 @@ function PianoStrip() {
               PIANO_NOTES[index];
 
             if (!note) return;
-
 
             playNote(
               note.freq,
@@ -1302,9 +1242,7 @@ function PianoStrip() {
           }
         );
 
-
         /* Strings */
-
         playStrings(
           notes,
           {
@@ -1316,9 +1254,7 @@ function PianoStrip() {
           }
         );
 
-
         /* Cello */
-
         playCello(
           notes,
           {
@@ -1330,9 +1266,7 @@ function PianoStrip() {
           }
         );
 
-
         /* Ambient pad */
-
         playPad(
           notes,
           {
@@ -1353,9 +1287,7 @@ function PianoStrip() {
     );
 
 
-  /* -------------------------------------------------------------------
-   * KEY FLASH
-   * ---------------------------------------------------------------- */
+  // KEY FLASH
 
   const flashKey = useCallback(
     (i, ms) => {
@@ -1376,12 +1308,10 @@ function PianoStrip() {
                 if (!prev.has(i))
                   return prev;
 
-
                 const next =
                   new Set(prev);
 
                 next.delete(i);
-
                 return next;
               }
             );
@@ -1389,16 +1319,13 @@ function PianoStrip() {
           ms
         );
 
-
       timers.current.push(id);
     },
     []
   );
 
 
-  /* -------------------------------------------------------------------
-   * MANUAL PIANO
-   * ---------------------------------------------------------------- */
+  // MANUAL PIANO
 
   const pressKey = useCallback(
     (i) => {
@@ -1408,7 +1335,6 @@ function PianoStrip() {
 
       if (!note) return;
 
-
       playNote(
         note.freq,
         {
@@ -1416,7 +1342,6 @@ function PianoStrip() {
           gain: 0.07
         }
       );
-
 
       flashKey(i, 260);
     },
@@ -1427,9 +1352,7 @@ function PianoStrip() {
   );
 
 
-  /* -------------------------------------------------------------------
-   * PLAY ORCHESTRA
-   * ---------------------------------------------------------------- */
+  // PLAY ORCHESTRA
 
   const playMelody =
     useCallback(
@@ -1442,9 +1365,7 @@ function PianoStrip() {
 
         timers.current = [];
 
-
         setIsPlaying(true);
-
 
         let elapsed = 0;
 
@@ -1499,12 +1420,10 @@ function PianoStrip() {
                     }
                   );
 
-
                   /* Illuminate piano keys */
 
                   step.notes.forEach(
                     (i) => {
-
                       flashKey(
                         i,
                         Math.min(
@@ -1518,9 +1437,7 @@ function PianoStrip() {
                 elapsed
               );
 
-
             timers.current.push(id);
-
 
             elapsed += step.dur;
           }
@@ -1534,7 +1451,6 @@ function PianoStrip() {
             elapsed + 600
           );
 
-
         timers.current.push(doneId);
       },
       [
@@ -1544,34 +1460,24 @@ function PianoStrip() {
     );
 
 
-  /* -------------------------------------------------------------------
-   * AUTOPLAY WHEN SCROLLED INTO VIEW
-   * ---------------------------------------------------------------- */
-
+  // AUTOPLAY WHEN SCROLLED INTO VIEW
   useEffect(() => {
-
     const el =
       wrapRef.current;
-
     if (!el) return;
-
 
     const obs =
       new IntersectionObserver(
         (entries) => {
-
           entries.forEach(
             (e) => {
-
               if (
                 e.isIntersecting &&
                 e.intersectionRatio > 0.4 &&
                 !hasPlayedRef.current
               ) {
-
                 hasPlayedRef.current =
                   true;
-
 
                 const id =
                   window.setTimeout(
@@ -1579,7 +1485,6 @@ function PianoStrip() {
                       playMelody(),
                     300
                   );
-
 
                 timers.current.push(id);
               }
@@ -1591,19 +1496,12 @@ function PianoStrip() {
         }
       );
 
-
     obs.observe(el);
-
 
     return () =>
       obs.disconnect();
 
   }, [playMelody]);
-
-
-  /* -------------------------------------------------------------------
-   * CLEANUP
-   * ---------------------------------------------------------------- */
 
   useEffect(
     () =>
@@ -1615,24 +1513,16 @@ function PianoStrip() {
     []
   );
 
-
-  /* -------------------------------------------------------------------
-   * UI
-   * ---------------------------------------------------------------- */
-
   return (
     <div
       className="ap-piano"
       ref={wrapRef}
     >
-
       <div className="ap-piano-head">
-
         <div className="ap-eyebrow">
           <Music2 size={13} />
           07 // PLAY IT YOURSELF
         </div>
-
 
         <button
           type="button"
@@ -1648,9 +1538,7 @@ function PianoStrip() {
             : "Repeat melody"}
 
         </button>
-
       </div>
-
 
       <div
         className="ap-keys"
@@ -1660,7 +1548,6 @@ function PianoStrip() {
 
         {PIANO_NOTES.map(
           (n, i) => (
-
             <button
               key={n.name}
               type="button"
@@ -1689,14 +1576,7 @@ function PianoStrip() {
             </button>
           )
         )}
-
       </div>
-
-
-      <div className="ap-piano-hint">
-        Una pequeña orquesta toca al llegar aquí — y tú también puedes tocar el piano.
-      </div>
-
     </div>
   );
 }
