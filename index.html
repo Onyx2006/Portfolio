@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEW ERA</title>
+<meta name="description" content="Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist" />
+<link rel="icon" href="data:," />
+<style>
+  html, body { margin: 0; padding: 0; background: #080a0f; }
+  /* Reserve the scrollbar's width permanently so the page never toggles
+     between "no scrollbar" and "scrollbar" while content height settles
+     (fonts loading, sections revealing, etc). That toggle is what was
+     shrinking the content width for a frame and snapping the scroll
+     position back up every couple of seconds. */
+  html { overflow-y: scroll; scrollbar-gutter: stable; }
+  #root:empty::before {
+    content: "Loading...";
+    display: block; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; color: #4ce7b4; background: #080a0f;
+  }
+</style>
+
+<!-- Import map: lets the browser resolve bare "react" / "lucide-react" specifiers
+     used inside the JSX below, without any build step or bundler. -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
+    "lucide-react": "https://esm.sh/lucide-react@0.383.0?external=react"
+  }
+}
+</script>
+
+<!-- Babel Standalone: transpiles the JSX below to plain JS, directly in the
+     browser, and (thanks to data-type="module") runs it as a real ES module
+     so the import map above is honored. This is what makes a single static
+     .html file with JSX inside work on GitHub Pages with zero build step. -->
+<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom/client";
+import {
+  Terminal, Cpu, Database, Shield, Code2, Music2, MapPin, Mail, Github,
+  Linkedin, ChevronDown, Award, GraduationCap, Briefcase, Sparkles, Camera,
+  Lock, Gamepad2, Layers, Server, Globe, GitBranch, CheckCircle2, Wrench,
+  Play, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
+} from "lucide-react";
+
+/* =========================================================================
+   EDIT ME — swap in your real details. Everything else in the file reads
+   from this object, so this is the only place you need to touch.
+   ========================================================================= */
+const PROFILE = {
+  name: "Oliver Gamboa Mesa",
+  role: "Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist",
+  location: "Marbella, Spain",
+  destination: "Ireland — November 2026",
+  email: "olivergamboamesa0850@gmail.com",
+  github: "https://github.com/onyx2006",
+  linkedin: "https://www.linkedin.com/in/oliver-gamboa-mesa/",
+  snakeGithub: "https://github.com/Onyx2006/flutter-snake",
+  photo: "me.jpg",
+};
+
+/* Musical scale used by the clickable background notes — click one and it
+   plays that pitch (Do Re Mi Fa Sol La Si Do). Purely decorative easter egg. */
+const SCALE = [
+  { name: "Do", freq: 261.63 },
+  { name: "Re", freq: 293.66 },
+  { name: "Mi", freq: 329.63 },
+  { name: "Fa", freq: 349.23 },
+  { name: "Sol", freq: 392.0 },
+  { name: "La", freq: 440.0 },
+  { name: "Si", freq: 493.88 },
+  { name: "Do", freq: 523.25 },
+];
+
+/* type: 'whole' | 'eighth' | 'sixteenth' — just controls which glyph is drawn */
+const NOTES = [
+  { top: 8, left: 6, type: "eighth", scale: 0, size: 26, dur: 9 },
+  { top: 22, left: 91, type: "sixteenth", scale: 1, size: 22, dur: 11 },
+  { top: 38, left: 3, type: "whole", scale: 2, size: 20, dur: 8 },
+  { top: 52, left: 95, type: "eighth", scale: 3, size: 24, dur: 10 },
+  { top: 65, left: 8, type: "sixteenth", scale: 4, size: 22, dur: 12 },
+  { top: 78, left: 92, type: "whole", scale: 5, size: 18, dur: 9 },
+  { top: 14, left: 48, type: "eighth", scale: 6, size: 20, dur: 10 },
+  { top: 88, left: 45, type: "sixteenth", scale: 7, size: 24, dur: 11 },
+  { top: 46, left: 55, type: "whole", scale: 1, size: 18, dur: 13 },
+  { top: 60, left: 2, type: "eighth", scale: 3, size: 20, dur: 9 },
+  { top: 30, left: 97, type: "sixteenth", scale: 5, size: 20, dur: 10 },
+  { top: 94, left: 12, type: "eighth", scale: 2, size: 22, dur: 12 },
+];
+
+/* A short ascending-then-falling melody drawn on a real 5-line staff,
+   purely decorative — the notes sit at hand-picked heights (in px, relative
+   to the staff) to sketch out a little tune. */
+const STAFF_MELODY = [0, 1, 2, 3, 4, 3, 2, 4, 5, 3, 1, 0];
+
+/* Two short chains of connected blocks scattered in the background. */
+const CHAIN_A = { top: 10, left: 62, rotate: -8, blocks: 4 };
+const CHAIN_B = { top: 70, left: 4, rotate: 6, blocks: 3 };
+
+const BOOT_LINES = [
+  "> booting career_os v2.6 ...",
+  "> mounting /skills ................ OK",
+  "> connecting to blockchain node .... OK",
+  "> loading piano.wasm ............... OK",
+  "> checking passport ................ VALID",
+  "> next destination: IRELAND, NOV 2026",
+  "> READY.",
+];
+
+const SECTIONS = [
+  { id: "hero", num: "00", label: "Start" },
+  { id: "about", num: "01", label: "About" },
+  { id: "skills", num: "02", label: "Skills" },
+  { id: "experience", num: "03", label: "Quests" },
+  { id: "projects", num: "04", label: "Build" },
+  { id: "education", num: "05", label: "Achv." },
+  { id: "contact", num: "06", label: "Next" },
+];
+
+const ATTRIBUTES = [
+  { label: "Problem Solving", value: 95 },
+  { label: "Commitment & Punctuality", value: 96 },
+  { label: "Learning Agility", value: 94 },
+  { label: "Adaptability", value: 90 },
+  { label: "Teamwork", value: 92 },
+  { label: "Stress Management", value: 88 },
+];
+
+const SKILL_GROUPS = [
+  {
+    id: "chain",
+    title: "Blockchain & Smart Contracts",
+    icon: Layers,
+    color: "var(--circuit)",
+    items: ["Solidity", "Java (custom blockchain)", "EVM / Hyperledger Besu", "Docker", "Kubernetes"],
+  },
+  {
+    id: "backend",
+    title: "Backend & Data",
+    icon: Database,
+    color: "var(--amber)",
+    items: ["PHP", "SQL / MySQL", "Spring Boot", "Laravel", "Symfony", "Express.js"],
+  },
+  {
+    id: "frontend",
+    title: "Frontend",
+    icon: Code2,
+    color: "var(--shamrock)",
+    items: ["JavaScript", "React", "Angular", "Flutter", "HTML5 / CSS3"],
+  },
+  {
+    id: "systems",
+    title: "Systems & DevOps",
+    icon: Server,
+    color: "var(--circuit)",
+    items: ["Python", "Bash / Linux", "YAML", "AWS", "CI/CD pipelines"],
+  },
+];
+
+const QUESTS = [
+  {
+    company: "Unknown Gravity",
+    place: "Málaga",
+    role: "Full-Stack Developer & QA Intern",
+    time: "Mar 2025 – Jun 2025",
+    bullets: [
+      "Ran QA passes using Postman, Playwright, Selenium, Slither and OWASP methodology.",
+      "Worked as a fullstack developer building a SaaS platform for tokenizing financial assets.",
+    ],
+    tags: ["QA", "Security", "Fullstack", "SaaS"],
+  },
+  {
+    company: "Vicox Legal",
+    place: "San Pedro de Alcántara",
+    role: "Blockchain Intern",
+    time: "Jun 2025 – Sep 2025",
+    bullets: [
+      "Worked hands-on with Bitcoin hashes and electronic certificates.",
+      "Designed and built a basic blockchain to test and validate transactions between wallets.",
+    ],
+    tags: ["Blockchain", "Bitcoin", "Cryptography"],
+  },
+];
+
+const EDUCATION = [
+  {
+    title: "Cybersecurity Specialization",
+    place: "Alan Turing School",
+    time: "Starting Sep 2026",
+    status: "upcoming",
+  },
+  {
+    title: "Learning & Knowledge Management",
+    place: "Online",
+    time: "Jun 2026 – Sep 2026",
+    status: "active",
+  },
+  {
+    title: "DAW — Web Application Development",
+    place: "I.E.S Salduba, San Pedro de Alcántara",
+    time: "Sep 2024 – Sep 2026",
+    status: "DONE",
+  },
+  {
+    title: "Science Baccalaureate",
+    place: "I.E.S Salduba, San Pedro de Alcántara",
+    time: "Sep 2022 – May 2024",
+    status: "done",
+  },
+];
+
+const BADGES = [
+  { title: "Google Cybersecurity Certificate", year: "2026", icon: Shield },
+  { title: "AI Fundamentals Certification", year: "2022", icon: Cpu },
+  { title: "Cambridge English B1 (working at B2)", year: "2023", icon: Globe },
+  { title: "Lifeguard, First Aid & AED Training", year: "2023", icon: Award },
+  { title: "Driving Licenses — B & A1", year: "2024", icon: CheckCircle2 },
+];
+
+const GALLERY = [
+  "Dashboard — heatmap view",
+  "Dashboard — results breakdown",
+  "Voting interface",
+  "Network architecture",
+];
+
+const SNAKE_TAGS = ["Flutter", "Dart", "Game Loop", "State Management", "Mobile"];
+
+const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
+  left: (i * 47) % 100,
+  top: (i * 83) % 100,
+  size: 1 + (i % 3),
+  delay: (i % 10) * 0.6,
+  dur: 6 + (i % 5) * 1.4,
+}));
+
+/* ---------------------------------------------------------------------
+   Decorative note glyph — draws a whole / eighth / sixteenth note as SVG.
+   --------------------------------------------------------------------- */
+function NoteGlyph({ type, size }) {
+  const w = size, h = size * 1.7;
+  if (type === "whole") {
+    return (
+      <svg width={w} height={size * 0.7} viewBox="0 0 26 16" fill="none">
+        <ellipse cx="13" cy="8" rx="10" ry="6.5" fill="none" stroke="currentColor" strokeWidth="2.4" />
+      </svg>
+    );
+  }
+  const flags = type === "sixteenth" ? 2 : 1;
+  return (
+    <svg width={w} height={h} viewBox="0 0 22 38" fill="none">
+      <ellipse cx="6.5" cy="32" rx="6" ry="4.6" fill="currentColor" transform="rotate(-18 6.5 32)" />
+      <rect x="10.5" y="2" width="2.2" height="30" fill="currentColor" />
+      <path d="M12.7 2 C 20 5, 20 12, 12.7 15" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      {flags === 2 && (
+        <path d="M12.7 10 C 20 13, 20 20, 12.7 23" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------------------
+   Scattered clickable music notes + a small staff with a drawn melody.
+   Clicking a note plays its pitch via the Web Audio API (do-re-mi...).
+   --------------------------------------------------------------------- */
+function MusicalBackground({ progress = 0 }) {
+  const ctxRef = useRef(null);
+  const [ping, setPing] = useState(null);
+  const [sparks, setSparks] = useState([]);
+  const pingTimer = useRef(null);
+  const lastAutoIndex = useRef(-1);
+  const sparkId = useRef(0);
+
+  const playTone = async (freq) => {
+    try {
+      if (!ctxRef.current) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        ctxRef.current = new AC();
+      }
+      const ctx = ctxRef.current;
+      // Some browsers (Safari especially) need resume() to fully finish
+      // before any node scheduled on the context will actually be heard —
+      // starting the oscillator before that resolves can play silently.
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.55);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {
+      /* audio not available (or not yet unlocked by a user gesture) — fail silently */
+    }
+  };
+
+  // Plays a note: pulses its color for a moment and bursts a few sparks
+  // from its position. Used both for manual clicks and the automatic
+  // sequence below.
+  const triggerNote = useCallback((i) => {
+    const n = NOTES[i];
+    const pitch = SCALE[n.scale];
+    playTone(pitch.freq);
+
+    setPing(i);
+    window.clearTimeout(pingTimer.current);
+    pingTimer.current = window.setTimeout(() => setPing((p) => (p === i ? null : p)), 700);
+
+    const id = ++sparkId.current;
+    setSparks((prev) => [...prev, { id, top: n.top, left: n.left }]);
+    window.setTimeout(() => {
+      setSparks((prev) => prev.filter((s) => s.id !== id));
+    }, 750);
+  }, []);
+
+  // Auto-play: as the page scrolls, walk through the notes one by one so a
+  // different one lights up (color pulse + sparks) every little bit of
+  // scroll progress — purely decorative, no click needed.
+  useEffect(() => {
+    const idx = Math.min(NOTES.length - 1, Math.floor(progress * NOTES.length));
+    if (idx !== lastAutoIndex.current) {
+      lastAutoIndex.current = idx;
+      triggerNote(idx);
+    }
+  }, [progress, triggerNote]);
+
+  return (
+    <div className="ap-music-layer" aria-hidden="false">
+      {NOTES.map((n, i) => {
+        const pitch = SCALE[n.scale];
+        return (
+          <button
+            key={i}
+            className={`ap-note ${ping === i ? "is-pinged" : ""}`}
+            style={{
+              top: `${n.top}%`,
+              left: `${n.left}%`,
+              animationDuration: `${n.dur}s`,
+              animationDelay: `${i * 0.4}s`,
+            }}
+            onClick={() => triggerNote(i)}
+            aria-label={`Play note ${pitch.name}`}
+            title={pitch.name}
+          >
+            <NoteGlyph type={n.type} size={n.size} />
+            <span className="ap-note-label">{pitch.name}</span>
+          </button>
+        );
+      })}
+
+      {sparks.map((s) => (
+        <span key={s.id} className="ap-spark" style={{ top: `${s.top}%`, left: `${s.left}%` }}>
+          {Array.from({ length: 6 }).map((_, k) => (
+            <i key={k} style={{ "--a": `${k * 60}deg` }} />
+          ))}
+        </span>
+      ))}
+
+      {/* pentagram with a small hand-drawn melody */}
+      <svg className="ap-staff" viewBox="0 0 640 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <line key={i} x1="0" y1={14 + i * 14} x2="640" y2={14 + i * 14} stroke="currentColor" strokeWidth="1" />
+        ))}
+        {STAFF_MELODY.map((step, i) => {
+          const x = 24 + i * 54;
+          const y = 70 - step * 9;
+          return (
+            <g key={i}>
+              {i > 0 && (
+                <line
+                  x1={x - 54 + 6} y1={70 - STAFF_MELODY[i - 1] * 9}
+                  x2={x + 6} y2={y}
+                  stroke="currentColor" strokeWidth="1.4" opacity="0.6"
+                />
+              )}
+              <ellipse cx={x} cy={y} rx="6" ry="4.6" fill="currentColor" transform={`rotate(-14 ${x} ${y})`} />
+              <rect x={x + 5.4} y={y - 26} width="1.6" height="26" fill="currentColor" />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------
+   A short chain of linked blocks, floating in the background.
+   --------------------------------------------------------------------- */
+function BlockChain({ top, left, rotate, blocks }) {
+  return (
+    <div
+      className="ap-chain"
+      style={{ top: `${top}%`, left: `${left}%`, transform: `rotate(${rotate}deg)` }}
+      aria-hidden="true"
+    >
+      {Array.from({ length: blocks }).map((_, i) => (
+        <React.Fragment key={i}>
+          <div className="ap-block">
+            <span />
+            <span />
+          </div>
+          {i < blocks - 1 && <div className="ap-block-link" />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------
+   Traveling border light. Instead of rotating a conic-gradient (which
+   cuts across corners at an angle on non-square boxes), this traces an
+   SVG outline shaped exactly like the card, so the light genuinely
+   glides along the border to the right / clockwise. A few faded copies
+   trail behind the bright leading dash to fake a comet tail that
+   dissolves on the left as the head advances.
+   --------------------------------------------------------------------- */
+function GlowBorder({ radius = 16, className = "", style, children }) {
+  const wrapRef = useRef(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => setBox({ w: el.offsetWidth, h: el.offsetHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const { w, h } = box;
+  const inset = 1;
+  const rectW = Math.max(0, w - inset * 2);
+  const rectH = Math.max(0, h - inset * 2);
+  const r = Math.min(radius, rectW / 2, rectH / 2);
+  const perimeter = 2 * (rectW + rectH) - 8 * r + 2 * Math.PI * r;
+  const dash = Math.max(20, perimeter * 0.14);
+  const gap = Math.max(0, perimeter - dash);
+  const duration = Math.max(3.2, perimeter / 70);
+
+  return (
+    <div ref={wrapRef} className={`ap-glowb ${className}`} style={style}>
+      {children}
+      {w > 0 && h > 0 && (
+        <svg className="ap-glowb-svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <rect
+              key={i}
+              x={inset} y={inset} width={rectW} height={rectH} rx={r} ry={r}
+              className="ap-glowb-trail"
+              style={{
+                strokeDasharray: `${dash} ${gap}`,
+                "--peri": `${perimeter}px`,
+                animationDuration: `${duration}s`,
+                animationDelay: `${-(i * duration * 0.09)}s`,
+                opacity: [1, 0.5, 0.26, 0.1][i],
+              }}
+            />
+          ))}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+// Playable browser-canvas Snake — a quick homage to the Flutter original.
+const SNAKE_GRID = 18;
+const SNAKE_CELL = 15;
+
+function SnakeGame() {
+  const canvasRef = useRef(null);
+  const stateRef = useRef(null);
+  const timerRef = useRef(null);
+  const [score, setScore] = useState(0);
+  const [best, setBest] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [started, setStarted] = useState(false);
+
+  const randomApple = (snake) => {
+    let pos;
+    do {
+      pos = {
+        x: Math.floor(Math.random() * SNAKE_GRID),
+        y: Math.floor(Math.random() * SNAKE_GRID),
+      };
+    } while (snake.some((s) => s.x === pos.x && s.y === pos.y));
+    return pos;
+  };
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const st = stateRef.current;
+    ctx.fillStyle = "#12151c";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(243,239,230,0.04)";
+    for (let i = 0; i < SNAKE_GRID; i++) {
+      for (let j = 0; j < SNAKE_GRID; j++) {
+        if ((i + j) % 2 === 0) ctx.fillRect(i * SNAKE_CELL, j * SNAKE_CELL, SNAKE_CELL, SNAKE_CELL);
+      }
+    }
+
+    ctx.fillStyle = "#ffb454";
+    ctx.beginPath();
+    ctx.arc(
+      st.apple.x * SNAKE_CELL + SNAKE_CELL / 2,
+      st.apple.y * SNAKE_CELL + SNAKE_CELL / 2,
+      SNAKE_CELL / 2.6, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    st.snake.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? "#4ce7b4" : "#2fbf76";
+      ctx.fillRect(seg.x * SNAKE_CELL + 1, seg.y * SNAKE_CELL + 1, SNAKE_CELL - 2, SNAKE_CELL - 2);
+    });
+  }, []);
+
+  const resetGame = useCallback(() => {
+    const snake = [{ x: 8, y: 9 }, { x: 7, y: 9 }, { x: 6, y: 9 }];
+    stateRef.current = {
+      snake,
+      dir: { x: 1, y: 0 },
+      nextDir: { x: 1, y: 0 },
+      apple: randomApple(snake),
+    };
+    setScore(0);
+    setGameOver(false);
+    setStarted(true);
+    draw();
+  }, [draw]);
+
+  const tick = useCallback(() => {
+    const st = stateRef.current;
+    if (!st) return;
+    st.dir = st.nextDir;
+    const head = { x: st.snake[0].x + st.dir.x, y: st.snake[0].y + st.dir.y };
+
+    const hitWall = head.x < 0 || head.y < 0 || head.x >= SNAKE_GRID || head.y >= SNAKE_GRID;
+    const hitSelf = st.snake.some((s) => s.x === head.x && s.y === head.y);
+
+    if (hitWall || hitSelf) {
+      clearInterval(timerRef.current);
+      setGameOver(true);
+      setBest((b) => Math.max(b, st.snake.length - 3));
+      return;
+    }
+
+    st.snake.unshift(head);
+    if (head.x === st.apple.x && head.y === st.apple.y) {
+      st.apple = randomApple(st.snake);
+      setScore((s) => s + 1);
+    } else {
+      st.snake.pop();
+    }
+    draw();
+  }, [draw]);
+
+  useEffect(() => {
+    if (started && !gameOver) {
+      timerRef.current = setInterval(tick, 130);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [started, gameOver, tick]);
+
+  const setDirection = (dx, dy) => {
+    const st = stateRef.current;
+    if (!st) return;
+    if (st.dir.x === -dx && st.dir.y === -dy) return;
+    st.nextDir = { x: dx, y: dy };
+  };
+
+  const onKeyDown = (e) => {
+    const map = {
+      ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+      w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+    };
+    if (map[e.key]) {
+      e.preventDefault();
+      if (!started || gameOver) resetGame();
+      setDirection(map[e.key][0], map[e.key][1]);
+    }
+  };
+
+  useEffect(() => {
+    stateRef.current = {
+      snake: [{ x: 8, y: 9 }, { x: 7, y: 9 }, { x: 6, y: 9 }],
+      dir: { x: 1, y: 0 },
+      nextDir: { x: 1, y: 0 },
+      apple: { x: 13, y: 9 },
+    };
+    draw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="ap-snake-wrap">
+      <div
+        className="ap-snake-board"
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        onClick={() => { if (!started || gameOver) resetGame(); }}
+      >
+        <canvas
+          ref={canvasRef}
+          width={SNAKE_GRID * SNAKE_CELL}
+          height={SNAKE_GRID * SNAKE_CELL}
+          className="ap-snake-canvas"
+        />
+        {(!started || gameOver) && (
+          <div className="ap-snake-overlay">
+            <Play />
+            <span>{gameOver ? "Game over — click to retry" : "Click or press an arrow key to play"}</span>
+          </div>
+        )}
+      </div>
+      <div className="ap-snake-side">
+        <div className="ap-snake-score">
+          <span>Score</span>
+          <strong>{score}</strong>
+        </div>
+        <div className="ap-snake-score">
+          <span>Best</span>
+          <strong>{best}</strong>
+        </div>
+        <div className="ap-snake-pad" aria-hidden="true">
+          <span />
+          <button onClick={() => { if (!started || gameOver) resetGame(); setDirection(0, -1); }}><ArrowUp size={14} /></button>
+          <span />
+          <button onClick={() => { if (!started || gameOver) resetGame(); setDirection(-1, 0); }}><ArrowLeft size={14} /></button>
+          <button onClick={resetGame}><RotateCcw size={13} /></button>
+          <button onClick={() => { if (!started || gameOver) resetGame(); setDirection(1, 0); }}><ArrowRight size={14} /></button>
+          <span />
+          <button onClick={() => { if (!started || gameOver) resetGame(); setDirection(0, 1); }}><ArrowDown size={14} /></button>
+          <span />
+        </div>
+        <p className="ap-snake-hint">Arrow keys or WASD. This browser build is a quick homage — the real thing is native Flutter.</p>
+      </div>
+    </div>
+  );
+}
+
+function Portfolio() {
+  const [bootDone, setBootDone] = useState(false);
+  const [displayed, setDisplayed] = useState([]);
+  const [current, setCurrent] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [active, setActive] = useState("hero");
+  const [visited, setVisited] = useState(() => new Set());
+
+  const sectionRefs = useRef({});
+  const glowRef = useRef(null);
+
+  // boot terminal typewriter
+  useEffect(() => {
+    let lineIdx = 0;
+    let charIdx = 0;
+    const interval = setInterval(() => {
+      if (lineIdx >= BOOT_LINES.length) {
+        clearInterval(interval);
+        return;
+      }
+      const line = BOOT_LINES[lineIdx];
+      charIdx += 1;
+      setCurrent(line.slice(0, charIdx));
+      if (charIdx >= line.length) {
+        setDisplayed((prev) => [...prev, line]);
+        setCurrent("");
+        lineIdx += 1;
+        charIdx = 0;
+      }
+    }, 20);
+    return () => clearInterval(interval);
+  }, []);
+
+  // scroll progress (rAF throttled)
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        setProgress(docHeight > 0 ? Math.min(1, Math.max(0, scrollTop / docHeight)) : 0);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // active section (scrollspy)
+  useEffect(() => {
+    const els = SECTIONS.map((s) => sectionRefs.current[s.id]).filter(Boolean);
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setActive(e.target.id);
+        });
+      },
+      { rootMargin: "-42% 0px -50% 0px", threshold: 0 }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  // reveal-on-scroll (visited sections get animation classes)
+  useEffect(() => {
+    const els = SECTIONS.map((s) => sectionRefs.current[s.id]).filter(Boolean);
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && e.intersectionRatio > 0.12) {
+            setVisited((prev) => {
+              if (prev.has(e.target.id)) return prev;
+              const next = new Set(prev);
+              next.add(e.target.id);
+              return next;
+            });
+          }
+        });
+      },
+      { threshold: [0, 0.12, 0.4] }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  const scrollTo = useCallback((id) => {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const setRef = (id) => (el) => {
+    sectionRefs.current[id] = el;
+  };
+
+  const onMouseMove = (e) => {
+    if (!glowRef.current) return;
+    glowRef.current.style.setProperty("--mx", `${e.clientX}px`);
+    glowRef.current.style.setProperty("--my", `${e.clientY}px`);
+  };
+
+  const railIndexTop = (i) => `${(i / (SECTIONS.length - 1)) * 100}%`;
+
+  return (
+    <div className="ap-root" onMouseMove={onMouseMove}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:ital,wght@1,500;1,600&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+        .ap-root {
+          --void: #080a0f;
+          --ebony: #12151c;
+          --ebony-2: #171b24;
+          --ivory: #f3efe6;
+          --ivory-dim: #a9b0bd;
+          --circuit: #4ce7b4;
+          --amber: #ffb454;
+          --shamrock: #2fbf76;
+          --line: rgba(243,239,230,0.10);
+          --font-display: 'Space Grotesk', sans-serif;
+          --font-body: 'Inter', sans-serif;
+          --font-mono: 'JetBrains Mono', monospace;
+          --font-accent: 'Fraunces', serif;
+          position: relative;
+          background: var(--void);
+          color: var(--ivory);
+          font-family: var(--font-body);
+          overflow-x: hidden;
+          min-height: 100vh;
+        }
+        .ap-root * { box-sizing: border-box; }
+        .ap-root ::selection { background: var(--circuit); color: var(--void); }
+
+        /* ---------- ambient background ---------- */
+        .ap-bg-grid {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background-image:
+            linear-gradient(var(--line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--line) 1px, transparent 1px);
+          background-size: 44px 44px;
+          mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+          opacity: 0.55;
+        }
+        .ap-bg-glow {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 30%), rgba(76,231,180,0.06), transparent 60%);
+        }
+        .ap-particle {
+          position: fixed; border-radius: 50%; background: var(--circuit);
+          z-index: 0; pointer-events: none; opacity: 0.35;
+          animation: apFloat linear infinite;
+        }
+        @keyframes apFloat {
+          0% { transform: translateY(0) scale(1); opacity: 0.15; }
+          50% { opacity: 0.5; }
+          100% { transform: translateY(-40px) scale(1.2); opacity: 0.15; }
+        }
+
+        /* ---------- progress rail (desktop) ---------- */
+        .ap-top-progress {
+          position: fixed; top: 0; left: 0; height: 3px; z-index: 60;
+          background: linear-gradient(90deg, var(--circuit), var(--amber));
+          transition: width 0.1s linear;
+        }
+        .ap-rail {
+          position: fixed; left: 28px; top: 0; bottom: 0; width: 140px;
+          display: none; align-items: center; z-index: 50; pointer-events: none;
+        }
+        .ap-rail-track {
+          position: relative; width: 2px; height: 62vh; margin-left: 5px;
+          background: var(--line); border-radius: 2px; pointer-events: auto;
+        }
+        .ap-rail-fill {
+          position: absolute; top: 0; left: 0; width: 100%;
+          background: linear-gradient(180deg, var(--circuit), var(--shamrock));
+          border-radius: 2px; transition: height 0.08s linear;
+        }
+        .ap-rail-avatar {
+          position: absolute; left: 50%; width: 12px; height: 12px; margin-left: -6px; margin-top: -6px;
+          background: var(--circuit); border-radius: 50%;
+          box-shadow: 0 0 0 4px rgba(76,231,180,0.18), 0 0 16px 2px var(--circuit);
+          transition: top 0.08s linear;
+        }
+        .ap-rail-node {
+          position: absolute; left: -9px; margin-top: -10px; width: 20px; height: 20px;
+          border-radius: 50%; background: var(--ebony); border: 2px solid var(--line);
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: all 0.25s ease; pointer-events: auto;
+        }
+        .ap-rail-node:hover { border-color: var(--amber); transform: scale(1.15); }
+        .ap-rail-node.is-active { border-color: var(--circuit); background: var(--circuit); box-shadow: 0 0 12px var(--circuit); }
+        .ap-rail-tip {
+          position: absolute; left: 28px; top: 50%; transform: translateY(-50%);
+          white-space: nowrap; font-family: var(--font-mono); font-size: 11px;
+          background: var(--ebony); border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px;
+          opacity: 0; transition: opacity 0.2s ease; color: var(--ivory-dim);
+        }
+        .ap-rail-node:hover .ap-rail-tip, .ap-rail-node.is-active .ap-rail-tip { opacity: 1; color: var(--ivory); }
+        @media (min-width: 1180px) { .ap-rail { display: flex; } }
+
+        /* ---------- animated glow border (skills / projects / contact) ---------- */
+        .ap-glowb { position: relative; }
+        .ap-glowb-svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+        .ap-glowb-trail {
+          fill: none;
+          stroke: var(--circuit);
+          stroke-width: 1.6;
+          stroke-linecap: round;
+          animation-name: apGlowTravel;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        @keyframes apGlowTravel {
+          from { stroke-dashoffset: 0; }
+          to { stroke-dashoffset: calc(var(--peri) * -1); }
+        }
+
+        main { position: relative; z-index: 1; }
+        section { position: relative; padding: 84px 24px; max-width: 1080px; margin: 0 auto; }
+        @media (max-width: 640px) { section { padding: 60px 20px; } }
+
+        .ap-eyebrow {
+          font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em;
+          color: var(--circuit); display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+          text-transform: uppercase;
+        }
+        .ap-eyebrow::before { content: ''; width: 20px; height: 1px; background: var(--circuit); }
+        .ap-h2 {
+          font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4vw, 44px);
+          line-height: 1.1; margin: 0 0 28px; letter-spacing: -0.01em;
+        }
+        .ap-h2 em { font-family: var(--font-accent); font-style: italic; font-weight: 500; color: var(--amber); }
+
+        .ap-reveal {
+          opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .ap-reveal.in-view { opacity: 1; transform: translateY(0); }
+        .ap-reveal.d1 { transition-delay: 0.08s; } .ap-reveal.d2 { transition-delay: 0.16s; }
+        .ap-reveal.d3 { transition-delay: 0.24s; } .ap-reveal.d4 { transition-delay: 0.32s; }
+
+        /* ---------- hero ---------- */
+        .ap-hero {
+          display: flex; flex-direction: column; justify-content: center;
+          padding-top: 72px; padding-bottom: 40px;
+        }
+        .ap-hero-inner { opacity: 0; transform: translateY(18px); transition: opacity 0.9s ease, transform 0.9s ease; }
+        .ap-hero-inner.is-revealed { opacity: 1; transform: translateY(0); }
+        .ap-kicker {
+          font-family: var(--font-mono); font-size: 13px; color: var(--shamrock);
+          display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px;
+          border: 1px solid rgba(47,191,118,0.35); padding: 6px 12px; border-radius: 999px;
+          background: rgba(47,191,118,0.08);
+        }
+        .ap-avatar-frame {
+          width: 400px; height: 400px; border-radius: 26px; overflow: hidden;
+          margin-bottom: 26px; background: var(--ebony-2);
+        }
+        .ap-avatar-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ap-avatar-placeholder {
+          width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: 8px; color: var(--ivory-dim); text-align: center; padding: 10px;
+        }
+        .ap-avatar-placeholder svg { width: 24px; height: 24px; color: var(--circuit); opacity: 0.8; }
+        .ap-avatar-placeholder span {
+          font-family: var(--font-mono); font-size: 9.5px; line-height: 1.5; letter-spacing: 0.02em;
+        }
+        .ap-name {
+          font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em;
+          font-size: clamp(40px, 8vw, 84px); line-height: 1; margin: 0 0 18px;
+        }
+        .ap-role {
+          font-family: var(--font-mono); font-size: clamp(14px, 2vw, 18px); color: var(--ivory-dim);
+          margin: 0 0 34px; max-width: 640px;
+        }
+        .ap-hud { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 46px; }
+        .ap-hud-chip {
+          font-family: var(--font-mono); font-size: 12px; padding: 8px 14px; border-radius: 8px;
+          border: 1px solid var(--line); background: rgba(255,255,255,0.02);
+          display: flex; align-items: center; gap: 8px; color: var(--ivory-dim);
+        }
+        .ap-hud-chip svg { width: 14px; height: 14px; color: var(--circuit); }
+        .ap-scroll-cue {
+          display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px;
+          color: var(--ivory-dim); cursor: pointer; background: none; border: none; padding: 0; width: fit-content;
+        }
+        .ap-scroll-cue svg { animation: apBounce 1.6s ease-in-out infinite; }
+        @keyframes apBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
+
+        /* ---------- boot overlay ---------- */
+        .ap-boot {
+          position: absolute; inset: 0; z-index: 20; background: var(--void);
+          display: flex; align-items: center; justify-content: center; padding: 24px;
+          transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .ap-boot.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .ap-boot-panel {
+          width: 100%; max-width: 560px; border: 1px solid var(--line); border-radius: 10px;
+          background: linear-gradient(180deg, var(--ebony), var(--void));
+          box-shadow: 0 0 60px rgba(76,231,180,0.06), inset 0 0 40px rgba(0,0,0,0.4);
+          padding: 22px 24px 26px; font-family: var(--font-mono);
+        }
+        .ap-boot-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+        .ap-boot-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+        .ap-boot-lines { min-height: 168px; font-size: 12.5px; line-height: 1.9; color: var(--circuit); }
+        .ap-boot-lines .done { color: var(--ivory-dim); }
+        .ap-boot-cursor { display: inline-block; width: 7px; height: 13px; background: var(--circuit); margin-left: 2px; animation: apBlink 1s step-end infinite; vertical-align: -2px; }
+        @keyframes apBlink { 50% { opacity: 0; } }
+        .ap-start-btn {
+          margin-top: 18px; width: 100%; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em;
+          font-size: 13px; padding: 13px 18px; border-radius: 6px; border: 1px solid var(--circuit);
+          background: rgba(76,231,180,0.08); color: var(--circuit); cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          transition: background 0.2s ease, transform 0.15s ease; opacity: 0; transform: translateY(6px);
+        }
+        .ap-start-btn.is-ready { opacity: 1; transform: translateY(0); }
+        .ap-start-btn:hover { background: rgba(76,231,180,0.18); transform: translateY(-1px); }
+
+        /* ---------- about ---------- */
+        .ap-about-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 56px; align-items: start; }
+        @media (max-width: 860px) { .ap-about-grid { grid-template-columns: 1fr; gap: 40px; } }
+        .ap-lede { font-family: var(--font-accent); font-style: italic; font-size: clamp(19px, 2.4vw, 24px); color: var(--ivory); line-height: 1.5; margin-bottom: 18px; }
+        .ap-p { font-size: 15.5px; line-height: 1.85; color: var(--ivory-dim); margin: 0 0 16px; }
+        .ap-stats-card { border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; background: rgba(255,255,255,0.015); }
+        .ap-stats-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--amber); margin-bottom: 20px; text-transform: uppercase; }
+        .ap-stat { margin-bottom: 16px; }
+        .ap-stat:last-child { margin-bottom: 0; }
+        .ap-stat-label { display: flex; justify-content: space-between; font-size: 12.5px; font-family: var(--font-mono); color: var(--ivory-dim); margin-bottom: 6px; }
+        .ap-stat-track { height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; }
+        .ap-stat-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--circuit), var(--shamrock)); width: 0%; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
+
+        /* ---------- skills ---------- */
+        .ap-skill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        @media (max-width: 720px) { .ap-skill-grid { grid-template-columns: 1fr; } }
+        .ap-skill-card { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; background: rgba(255,255,255,0.015); transition: border-color 0.25s ease, transform 0.25s ease; }
+        .ap-skill-card:hover { transform: translateY(-3px); }
+        .ap-skill-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .ap-skill-head svg { width: 18px; height: 18px; }
+        .ap-skill-head h3 { font-family: var(--font-display); font-size: 16px; margin: 0; font-weight: 600; }
+        .ap-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ap-chip { font-family: var(--font-mono); font-size: 11.5px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--ivory-dim); background: rgba(0,0,0,0.2); }
+
+        /* ---------- experience / quest log ---------- */
+        .ap-quest-list { position: relative; padding-left: 26px; }
+        .ap-quest-list::before { content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+        .ap-quest { position: relative; margin-bottom: 40px; }
+        .ap-quest:last-child { margin-bottom: 0; }
+        .ap-quest::before {
+          content: ''; position: absolute; left: -26px; top: 4px; width: 12px; height: 12px; border-radius: 50%;
+          background: var(--void); border: 2px solid var(--circuit); box-shadow: 0 0 10px rgba(76,231,180,0.4);
+        }
+        .ap-quest-tag-done { font-family: var(--font-mono); font-size: 10.5px; color: var(--shamrock); letter-spacing: 0.1em; margin-bottom: 6px; display: block; text-transform: uppercase; }
+        .ap-quest-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin: 0 0 2px; }
+        .ap-quest-meta { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); margin-bottom: 12px; }
+        .ap-quest ul { margin: 0 0 14px; padding-left: 18px; }
+        .ap-quest li { font-size: 14.5px; line-height: 1.75; color: var(--ivory-dim); margin-bottom: 4px; }
+        .ap-tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ap-tag { font-family: var(--font-mono); font-size: 10.5px; padding: 4px 10px; border-radius: 6px; background: rgba(255,180,84,0.1); color: var(--amber); border: 1px solid rgba(255,180,84,0.25); }
+
+        /* ---------- projects ---------- */
+        .ap-project-card { border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px; background: linear-gradient(160deg, rgba(76,231,180,0.04), rgba(255,255,255,0.01)); margin-bottom: 40px; }
+        .ap-project-card:last-child { margin-bottom: 5; }
+        .ap-project-kicker { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); margin-bottom: 10px; }
+        @media (max-width: 640px) { .ap-project-card { padding: 18px; } }
+        .ap-project-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+        .ap-project-title { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 30px); margin: 0; }
+        .ap-lock-badge { display: flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 11px; color: var(--ivory-dim); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+        .ap-lock-badge svg { width: 13px; height: 13px; color: var(--amber); }
+        .ap-project-card .ap-p { max-width: 720px; }
+        .ap-tech-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 30px; }
+        .ap-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        @media (max-width: 760px) { .ap-gallery { grid-template-columns: repeat(2, 1fr); } }
+        .ap-gallery-slot {
+          aspect-ratio: 4 / 3; border: 1.5px dashed var(--line); border-radius: 10px;
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+          color: var(--ivory-dim); text-align: center; padding: 12px; transition: border-color 0.2s ease, color 0.2s ease;
+        }
+        .ap-gallery-slot:hover { border-color: var(--circuit); color: var(--circuit); }
+        .ap-gallery-slot svg { width: 20px; height: 20px; opacity: 0.7; }
+        .ap-gallery-slot span { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.4; }
+
+        /* ---------- education ---------- */
+        .ap-edu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
+        @media (max-width: 860px) { .ap-edu-grid { grid-template-columns: 1fr; gap: 36px; } }
+        .ap-edu-item { border-left: 2px solid var(--line); padding: 2px 0 20px 18px; position: relative; }
+        .ap-edu-item::before { content: ''; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--ebony); border: 2px solid var(--ivory-dim); }
+        .ap-edu-item.active::before { border-color: var(--circuit); background: var(--circuit); }
+        .ap-edu-item.upcoming::before { border-color: var(--amber); background: var(--amber); }
+        .ap-edu-status { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; display: block; color: var(--ivory-dim); }
+        .ap-edu-item.active .ap-edu-status { color: var(--circuit); }
+        .ap-edu-item.upcoming .ap-edu-status { color: var(--amber); }
+        .ap-edu-title { font-family: var(--font-display); font-weight: 600; font-size: 16.5px; margin: 0 0 3px; }
+        .ap-edu-meta { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); }
+        .ap-badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 500px) { .ap-badge-grid { grid-template-columns: 1fr; } }
+        .ap-badge { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: rgba(255,255,255,0.015); }
+        .ap-badge svg { width: 17px; height: 17px; color: var(--amber); flex-shrink: 0; margin-top: 2px; }
+        .ap-badge-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
+        .ap-badge-year { font-family: var(--font-mono); font-size: 10.5px; color: var(--ivory-dim); margin-top: 2px; }
+
+        /* ---------- contact ---------- */
+        .ap-contact-card {
+          border: 1px solid var(--line); border-radius: 18px; padding: 44px 36px; text-align: center;
+          background: radial-gradient(circle at 50% 0%, rgba(47,191,118,0.08), transparent 60%);
+        }
+        @media (max-width: 640px) { .ap-contact-card { padding: 32px 20px; } }
+        .ap-contact-card .ap-eyebrow { justify-content: center; }
+        .ap-contact-card .ap-eyebrow::before { display: none; }
+        .ap-contact-title { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 4vw, 40px); margin: 0 0 16px; }
+        .ap-contact-title em { font-family: var(--font-accent); font-style: italic; color: var(--shamrock); font-weight: 500; }
+        .ap-contact-p { max-width: 520px; margin: 0 auto 32px; color: var(--ivory-dim); font-size: 15px; line-height: 1.8; }
+        .ap-contact-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+        .ap-contact-btn {
+          display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px;
+          padding: 12px 20px; border-radius: 8px; border: 1px solid var(--line); color: var(--ivory);
+          text-decoration: none; transition: all 0.2s ease; background: rgba(255,255,255,0.02);
+        }
+        .ap-contact-btn:hover { border-color: var(--circuit); color: var(--circuit); transform: translateY(-2px); }
+        .ap-contact-btn svg { width: 15px; height: 15px; }
+        .ap-contact-btn.primary { background: var(--circuit); color: var(--void); border-color: var(--circuit); font-weight: 700; }
+        .ap-contact-btn.primary:hover { background: var(--ivory); border-color: var(--ivory); color: var(--void); }
+
+        /* ---------- footer / piano strip ---------- */
+        .ap-footer { padding: 0 24px 50px; max-width: 1080px; margin: 0 auto; }
+        .ap-keys { display: flex; height: 46px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 22px; }
+        .ap-key { flex: 1; background: var(--ebony-2); border-right: 1px solid var(--line); transition: transform 0.15s ease, background 0.15s ease; cursor: pointer; }
+        .ap-key:hover { background: var(--circuit); transform: translateY(3px); }
+        .ap-key:last-child { border-right: none; }
+        .ap-footer-line { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); text-align: center; }
+        .ap-footer-line svg { width: 12px; height: 12px; display: inline; vertical-align: -2px; margin: 0 4px; color: var(--circuit); }
+
+        /* ---------- musical background ---------- */
+        .ap-music-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; color: var(--ivory); }
+        .ap-note {
+          position: absolute; pointer-events: auto; background: none; border: none; cursor: pointer;
+          color: var(--ivory-dim); opacity: 0.4; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+          animation: apNoteFloat ease-in-out infinite;
+          transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+        }
+        .ap-note:hover { color: var(--amber); opacity: 0.95; transform: scale(1.15); }
+        .ap-note.is-pinged { color: var(--circuit); opacity: 1; }
+        .ap-note-label {
+          font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em;
+          opacity: 0; transition: opacity 0.2s ease;
+        }
+        .ap-note:hover .ap-note-label, .ap-note.is-pinged .ap-note-label { opacity: 0.85; }
+        @keyframes apNoteFloat {
+          0%, 100% { transform: translateY(0) rotate(-3deg); }
+          50% { transform: translateY(-14px) rotate(3deg); }
+        }
+        .ap-staff {
+          position: absolute; top: 6%; left: 50%; transform: translateX(-50%);
+          width: min(640px, 82vw); height: auto; color: var(--ivory-dim); opacity: 0.16;
+        }
+        @media (max-width: 720px) { .ap-staff { display: none; } }
+
+        /* ---------- note spark bursts ---------- */
+        .ap-spark { position: absolute; width: 0; height: 0; pointer-events: none; }
+        .ap-spark i {
+          position: absolute; top: 0; left: 0; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+          border-radius: 50%; background: var(--circuit); box-shadow: 0 0 6px 1px var(--circuit);
+          transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1;
+          animation: apSparkFly 0.75s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+        }
+        @keyframes apSparkFly {
+          0% { transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1; }
+          100% { transform: rotate(var(--a)) translateX(24px) scale(0.2); opacity: 0; }
+        }
+
+        /* ---------- blockchain background ---------- */
+        .ap-chain { position: fixed; z-index: 0; pointer-events: none; display: flex; align-items: center; opacity: 0.22; }
+        .ap-block {
+          width: 34px; height: 34px; border: 1.5px solid var(--circuit); border-radius: 6px;
+          display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 6px;
+          background: rgba(76,231,180,0.04);
+        }
+        .ap-block span { display: block; height: 2px; background: var(--circuit); opacity: 0.7; border-radius: 1px; }
+        .ap-block span:last-child { width: 60%; }
+        .ap-block-link { width: 18px; height: 1.5px; background: var(--circuit); }
+        @media (max-width: 720px) { .ap-chain { display: none; } }
+
+        /* ---------- snake game ---------- */
+        .ap-snake-wrap { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; margin-top: 22px; }
+        .ap-snake-board {
+          position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+          outline: none; cursor: pointer; line-height: 0; flex-shrink: 0;
+        }
+        .ap-snake-board:focus-visible { border-color: var(--circuit); box-shadow: 0 0 0 3px rgba(76,231,180,0.25); }
+        .ap-snake-canvas { display: block; image-rendering: pixelated; }
+        .ap-snake-overlay {
+          position: absolute; inset: 0; background: rgba(8,10,15,0.82); color: var(--ivory);
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+          font-family: var(--font-mono); font-size: 11.5px; text-align: center; padding: 16px;
+        }
+        .ap-snake-overlay svg { color: var(--circuit); width: 26px; height: 26px; }
+        .ap-snake-side { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 12px; }
+        .ap-snake-score {
+          display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-mono);
+          border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 12px; color: var(--ivory-dim);
+        }
+        .ap-snake-score strong { font-size: 18px; color: var(--circuit); font-family: var(--font-display); }
+        .ap-snake-pad { display: grid; grid-template-columns: repeat(3, 34px); gap: 6px; }
+        .ap-snake-pad button, .ap-snake-pad span { width: 34px; height: 34px; }
+        .ap-snake-pad button {
+          border: 1px solid var(--line); background: var(--ebony-2); color: var(--ivory-dim);
+          border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .ap-snake-pad button:hover { border-color: var(--circuit); color: var(--circuit); }
+        .ap-snake-hint { font-size: 12px; color: var(--ivory-dim); line-height: 1.6; margin: 4px 0 0; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ap-reveal, .ap-hero-inner, .ap-scroll-cue svg, .ap-particle, .ap-key, .ap-note, .ap-glowb-trail { animation: none !important; transition: none !important; }
+        }
+      `}</style>
+
+      <div className="ap-bg-grid" aria-hidden="true" />
+      <div className="ap-bg-glow" ref={glowRef} aria-hidden="true" />
+      <MusicalBackground progress={progress} />
+      <BlockChain {...CHAIN_A} />
+      <BlockChain {...CHAIN_B} />
+      {PARTICLES.map((p, i) => (
+        <div
+          key={i}
+          className="ap-particle"
+          aria-hidden="true"
+          style={{
+            left: `${p.left}%`,
+            top: `${p.top}%`,
+            width: p.size,
+            height: p.size,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+          }}
+        />
+      ))}
+
+      <div className="ap-top-progress" style={{ width: `${progress * 100}%` }} />
+
+      <nav className="ap-rail" aria-label="Section navigation">
+        <div className="ap-rail-track">
+          <div className="ap-rail-fill" style={{ height: `${progress * 100}%` }} />
+          <div className="ap-rail-avatar" style={{ top: `${progress * 100}%` }} />
+          {SECTIONS.map((s, i) => (
+            <button
+              key={s.id}
+              className={`ap-rail-node ${active === s.id ? "is-active" : ""}`}
+              style={{ top: railIndexTop(i) }}
+              onClick={() => scrollTo(s.id)}
+              aria-label={`Go to ${s.label}`}
+            >
+              <span className="ap-rail-tip">{s.num} · {s.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <main>
+        {/* HERO  */}
+        <section id="hero" ref={setRef("hero")} className="ap-hero">
+          <div className={`ap-hero-inner ${bootDone ? "is-revealed" : ""}`}>
+            <GlowBorder radius={26} className="ap-avatar-frame">
+              {PROFILE.photo ? (
+                <img src={PROFILE.photo} alt={PROFILE.name} />
+              ) : (
+                <div className="ap-avatar-placeholder">
+                  <Camera />
+                  <span>Add your photo — set PROFILE.photo</span>
+                </div>
+              )}
+            </GlowBorder>
+            <div className="ap-kicker">
+              <Gamepad2 size={14} /> PLAYER PROFILE LOADED
+            </div>
+            <h1 className="ap-name">{PROFILE.name}</h1>
+            <p className="ap-role">{PROFILE.role}</p>
+            <div className="ap-hud">
+              <span className="ap-hud-chip"><MapPin /> {PROFILE.location} → {PROFILE.destination}</span>
+              <span className="ap-hud-chip"><Sparkles /> Open to opportunities</span>
+              <span className="ap-hud-chip"><Terminal /> Class: Full-Stack / Blockchain</span>
+            </div>
+            <button className="ap-scroll-cue" onClick={() => scrollTo("about")}>
+              Continue <ChevronDown size={15} />
+            </button>
+          </div>
+
+          <div className={`ap-boot ${bootDone ? "is-hidden" : ""}`}>
+            <div className="ap-boot-panel">
+              <div className="ap-boot-bar">
+                <span className="ap-boot-dot" /><span className="ap-boot-dot" /><span className="ap-boot-dot" />
+              </div>
+              <div className="ap-boot-lines">
+                {displayed.map((l, i) => (
+                  <div key={i} className="done">{l}</div>
+                ))}
+                {displayed.length < BOOT_LINES.length && (
+                  <div>{current}<span className="ap-boot-cursor" /></div>
+                )}
+              </div>
+              <button
+                className={`ap-start-btn ${displayed.length >= BOOT_LINES.length ? "is-ready" : ""}`}
+                onClick={() => setBootDone(true)}
+                disabled={displayed.length < BOOT_LINES.length}
+              >
+                <Gamepad2 size={15} /> PRESS START
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ABOUT */}
+        <section id="about" ref={setRef("about")}>
+          <div className={`ap-reveal ${visited.has("about") ? "in-view" : ""}`}>
+            <div className="ap-eyebrow"><Terminal size={13} /> 01 // ABOUT</div>
+            <h2 className="ap-h2">Two disciplines, <em>one way of thinking</em></h2>
+          </div>
+          <div className="ap-about-grid">
+            <div className={`ap-reveal d1 ${visited.has("about") ? "in-view" : ""}`}>
+              <p className="ap-lede">
+                I move comfortably between transactional databases, a custom blockchain written in Java, and a piano keyboard I taught myself to play.
+              </p>
+              <p className="ap-p">
+                Different instruments, same instinct: take something complex, understand it from the inside, and turn it into something real. Being self-taught — in code and in music — means I built my own process for learning fast, sitting with hard problems until they click, and shipping.
+              </p>
+              <p className="ap-p">
+                That range shows up in the work: object-oriented systems, game design in Unreal Engine, Linux server administration, AWS deployments, tokenized equity platforms, and permissioned EVM networks running on Besu.
+              </p>
+              <p className="ap-p">
+                I'm looking for a place where technology, creativity and genuine craftsmanship meet — where I can help build things that matter, and that don't feel like anyone could have made them.
+              </p>
+            </div>
+            <div className={`ap-reveal d2 ${visited.has("about") ? "in-view" : ""}`}>
+              <div className="ap-stats-card">
+                <div className="ap-stats-title">Core Attributes</div>
+                {ATTRIBUTES.map((a) => (
+                  <div className="ap-stat" key={a.label}>
+                    <div className="ap-stat-label"><span>{a.label}</span><span>{a.value}</span></div>
+                    <div className="ap-stat-track">
+                      <div
+                        className="ap-stat-fill"
+                        style={{ width: visited.has("about") ? `${a.value}%` : "0%" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SKILLS */}
+        <section id="skills" ref={setRef("skills")}>
+          <div className={`ap-reveal ${visited.has("skills") ? "in-view" : ""}`}>
+            <div className="ap-eyebrow"><Layers size={13} /> 02 // TECH TREE</div>
+            <h2 className="ap-h2">Inventory <em>unlocked</em></h2>
+          </div>
+          <div className="ap-skill-grid">
+            {SKILL_GROUPS.map((g, i) => {
+              const Icon = g.icon;
+              return (
+                <div key={g.id} className={`ap-reveal d${(i % 4) + 1} ${visited.has("skills") ? "in-view" : ""}`}>
+                  <GlowBorder radius={12} className="ap-skill-card" style={{ borderColor: "var(--line)" }}>
+                    <div className="ap-skill-head">
+                      <Icon style={{ color: g.color }} />
+                      <h3>{g.title}</h3>
+                    </div>
+                    <div className="ap-chip-row">
+                      {g.items.map((it) => (
+                        <span className="ap-chip" key={it}>{it}</span>
+                      ))}
+                    </div>
+                  </GlowBorder>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* EXPERIENCE */}
+        <section id="experience" ref={setRef("experience")}>
+          <div className={`ap-reveal ${visited.has("experience") ? "in-view" : ""}`}>
+            <div className="ap-eyebrow"><Briefcase size={13} /> 03 // QUEST LOG</div>
+            <h2 className="ap-h2">Completed <em>quests</em></h2>
+          </div>
+          <div className={`ap-reveal d1 ${visited.has("experience") ? "in-view" : ""}`}>
+            <div className="ap-quest-list">
+              {QUESTS.map((q) => (
+                <div className="ap-quest" key={q.company}>
+                  <span className="ap-quest-tag-done">✓ Quest complete</span>
+                  <h3 className="ap-quest-title">{q.role}</h3>
+                  <div className="ap-quest-meta">{q.company} · {q.place} · {q.time}</div>
+                  <ul>
+                    {q.bullets.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                  <div className="ap-tag-row">
+                    {q.tags.map((t) => <span className="ap-tag" key={t}>{t}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* PROJECTS */}
+        <section id="projects" ref={setRef("projects")}>
+          <div className={`ap-reveal ${visited.has("projects") ? "in-view" : ""}`}>
+            <div className="ap-eyebrow"><Sparkles size={13} /> 04 // FEATURED BUILDS</div>
+            <h2 className="ap-h2">Things I've actually <em>shipped</em></h2>
+          </div>
+
+          <div className={`ap-reveal d1 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">Boss level</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">AGORA — On-Chain Voting, Reimagined</h3>
+                <span className="ap-lock-badge"><Lock /> Private repository</span>
+              </div>
+              <p className="ap-p">
+                AGORA is a full electronic voting system built on a private, permissioned Ethereum network powered by Hyperledger Besu. Every vote is written directly to the blockchain, making results immutable and tamper-proof by design — no ballot can be altered or duplicated after the fact.
+              </p>
+              <p className="ap-p">
+                On top of the chain sits a live analytics layer built with Chart.js, turning raw voting data into heatmaps, pie breakdowns and bar comparisons that update as results come in.
+              </p>
+              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
+                The project is currently kept private — it's strong enough that a commercial release is on the table, so the source isn't public yet. If you want a demo, let me know.
+              </p>
+              <div className="ap-tech-row">
+                {["Hyperledger Besu", "EVM", "Solidity", "Java", "Chart.js", "Immutable Ledger"].map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+            </GlowBorder>
+          </div>
+
+          <div className={`ap-reveal d2 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">Side quest</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">Snake — Grow, Don't Stop</h3>
+                <a className="ap-lock-badge" href={PROFILE.snakeGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
+              </div>
+              <p className="ap-p">
+                A classic worm-eats-apples game built natively in Flutter — smooth animations, a growing snake body, collision detection and a live scoreboard, all running as a cross-platform mobile app.
+              </p>
+              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
+                Since you're already here: the board below plays by the exact same rules as the Flutter app — move, eat, grow, don't hit a wall or yourself — rebuilt with canvas so it runs in the browser. The real native Flutter source is on GitHub.
+              </p>
+              <div className="ap-tech-row">
+                {SNAKE_TAGS.map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+              <SnakeGame />
+            </GlowBorder>
+          </div>
+        </section>
+
+        {/* EDUCATION */}
+        <section id="education" ref={setRef("education")}>
+          <div className={`ap-reveal ${visited.has("education") ? "in-view" : ""}`}>
+            <div className="ap-eyebrow"><GraduationCap size={13} /> 05 // ACHIEVEMENTS</div>
+            <h2 className="ap-h2">Unlocked <em>along the way</em></h2>
+          </div>
+          <div className="ap-edu-grid">
+            <div className={`ap-reveal d1 ${visited.has("education") ? "in-view" : ""}`}>
+              <div className="ap-stats-title" style={{ marginBottom: 18 }}>Education</div>
+              {EDUCATION.map((e) => (
+                <div className={`ap-edu-item ${e.status}`} key={e.title}>
+                  <span className="ap-edu-status">{e.status === "upcoming" ? "Upcoming" : e.status === "active" ? "In progress" : "Completed"}</span>
+                  <div className="ap-edu-title">{e.title}</div>
+                  <div className="ap-edu-meta">{e.place} · {e.time}</div>
+                </div>
+              ))}
+            </div>
+            <div className={`ap-reveal d2 ${visited.has("education") ? "in-view" : ""}`}>
+              <div className="ap-stats-title" style={{ marginBottom: 18 }}>Certifications</div>
+              <div className="ap-badge-grid">
+                {BADGES.map((b) => {
+                  const Icon = b.icon;
+                  return (
+                    <div className="ap-badge" key={b.title}>
+                      <Icon />
+                      <div>
+                        <div className="ap-badge-title">{b.title}</div>
+                        {b.year && <div className="ap-badge-year">{b.year}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section id="contact" ref={setRef("contact")}>
+          <div className={`ap-reveal ${visited.has("contact") ? "in-view" : ""}`}>
+            <GlowBorder radius={18} className="ap-contact-card">
+              <div className="ap-eyebrow"><MapPin size={13} /> 06 // NEXT LEVEL</div>
+              <h3 className="ap-contact-title">New map loading: <em>Ireland, Nov 2026</em></h3>
+              <p className="ap-contact-p">
+                I'm relocating to Ireland this November and looking for a team ready to put creativity and solid engineering to work together. If that sounds like your kind of project, let's talk.
+              </p>
+              <div className="ap-contact-row">
+                <a className="ap-contact-btn primary" href={`mailto:${PROFILE.email}`}><Mail /> {PROFILE.email}</a>
+                <a className="ap-contact-btn" href={PROFILE.github} target="_blank" rel="noreferrer"><Github /> GitHub</a>
+                <a className="ap-contact-btn" href={PROFILE.linkedin} target="_blank" rel="noreferrer"><Linkedin /> LinkedIn</a>
+              </div>
+            </GlowBorder>
+          </div>
+        </section>
+
+        <footer className="ap-footer">
+          <div className="ap-keys" aria-hidden="true">
+            {Array.from({ length: 18 }).map((_, i) => <div className="ap-key" key={i} />)}
+          </div>
+          <div className="ap-footer-line">
+            Built with React <Music2 /> composed in Marbella <GitBranch /> shipping to Ireland
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<Portfolio />);
+
+</script>
+</body>
+</html>
