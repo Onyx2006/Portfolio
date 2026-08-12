@@ -167,6 +167,60 @@ const SKILL_GROUPS = [
   },
 ];
 
+/* Small hand-drawn SVG glyph per language/framework, drawn in the same
+   line-icon language as the lucide icons already used across the site
+   (24x24 viewBox, rounded strokes) so they blend in instead of looking
+   like stock logo art pasted on top. */
+function TechIcon({ name }) {
+  const s = { width: 13, height: 13, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
+  switch (name) {
+    case "Solidity":
+      return <svg {...s}><path d="M12 2 20 9 12 22 4 9Z" /><path d="M4 9h16" /><path d="M8.5 9 12 2l3.5 7" /></svg>;
+    case "Java (custom blockchain)":
+      return <svg {...s}><path d="M4 9h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9Z" /><path d="M17 10.5h1.3a2 2 0 0 1 0 4H17" /><path d="M8.3 3c-.6 1 .5 1.4 0 2.4M12.3 3c-.6 1 .5 1.4 0 2.4" /></svg>;
+    case "EVM / Hyperledger Besu":
+      return <svg {...s}><path d="M9.5 14.5 14.5 9.5" /><path d="M8 12a3.5 3.5 0 0 1 3.5-3.5H14a3.5 3.5 0 1 1 0 7h-1" /><path d="M16 12a3.5 3.5 0 0 1-3.5 3.5H10a3.5 3.5 0 1 1 0-7h1" /></svg>;
+    case "Docker":
+      return <svg {...s}><rect x="3" y="10.5" width="3.4" height="3.4" /><rect x="7" y="10.5" width="3.4" height="3.4" /><rect x="11" y="10.5" width="3.4" height="3.4" /><rect x="7" y="6.5" width="3.4" height="3.4" /><path d="M2 14.5c0 3.6 3.3 5.5 8 5.5 5.2 0 8.3-2.3 9.7-5.8.9.1 2-.3 2.3-1.2-1-.9-2.2-.6-2.7-.3-1-1-2.8-1.2-2.8-1.2s-.7 1.5-3 1.5H3.3c-.7 0-1.3.6-1.3 1.5Z" /></svg>;
+    case "Kubernetes":
+      return <svg {...s}><path d="m12 2.5 2.3 1.3.8 2.6 2.7.5 1.5 2.3-.9 2.6.9 2.6-1.5 2.3-2.7.5-.8 2.6L12 21.5l-2.3-1.3-.8-2.6-2.7-.5-1.5-2.3.9-2.6-.9-2.6 1.5-2.3 2.7-.5.8-2.6Z" /><circle cx="12" cy="12" r="2.6" /></svg>;
+    case "PHP":
+      return <svg {...s}><ellipse cx="12" cy="12" rx="9.5" ry="5.5" /><path d="M6.7 10v4M6.7 10h1.3a1.3 1.3 0 0 1 0 2.6H6.7" /><path d="M11.3 10v4M11.3 10h1.3a1.3 1.3 0 0 1 0 2.6h-1.3" /><path d="M16 10v4M16 10h1.3a1.3 1.3 0 0 1 0 2.6H16" /></svg>;
+    case "SQL / MySQL":
+      return <Database size={13} strokeWidth={1.6} />;
+    case "Spring Boot":
+      return <svg {...s}><path d="M20 4C10.5 4 4.5 9.8 4.5 19.5 12.7 19.5 19.5 13.4 19.5 5c0-.4 0-.7-.1-1Z" /><path d="M5.5 18.5c4-1 7.8-4.7 9-9" /></svg>;
+    case "Laravel":
+      return <svg {...s}><path d="M6 4.5v12l6 3 6-3v-6.6l-6-3-3.2 1.9V17" /></svg>;
+    case "Symfony":
+      return <svg {...s}><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M4.4 4.4l2.1 2.1M17.5 17.5l2.1 2.1M1.5 12h3M19.5 12h3M4.4 19.6l2.1-2.1M17.5 6.5l2.1-2.1" /></svg>;
+    case "Express.js":
+      return <svg {...s}><path d="M4 6.5c4.3 0 4.3 11 8.5 11M20 6.5c-4.3 0-4.3 11-8.5 11" /></svg>;
+    case "JavaScript":
+      return <svg {...s}><rect x="3" y="3" width="18" height="18" rx="3.5" /><path d="M8.3 14.8c0 1.3.9 1.9 1.9 1.9s1.8-.7 1.8-1.9v-4.6" /><path d="M15.2 10.2c-1.3 0-2 .6-2 1.4 0 .7.6 1.1 1.8 1.6 1.2.5 1.8.9 1.8 1.8 0 .8-.8 1.5-1.9 1.5-.9 0-1.6-.4-1.9-1.2" /></svg>;
+    case "React":
+      return <svg {...s}><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" /><ellipse cx="12" cy="12" rx="9" ry="3.6" /><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" /><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(120 12 12)" /></svg>;
+    case "Angular":
+      return <svg {...s}><path d="M12 2.5 20 5.8 18.6 17 12 21.5 5.4 17 4 5.8Z" /><path d="M12 7.5 16 17M12 7.5 8 17M9.4 14h5.2" /></svg>;
+    case "Flutter":
+      return <svg {...s} fill="currentColor" stroke="none"><path d="M4.5 12 14 2.5h5.2L9.7 12h9.5L9.7 21.5H4.5l5-5-5-4.5Z" /></svg>;
+    case "HTML5 / CSS3":
+      return <svg {...s}><path d="M8.5 4 3.5 12l5 8M15.5 4l5 8-5 8" /></svg>;
+    case "Python":
+      return <svg {...s}><path d="M9 2.5h4a3 3 0 0 1 3 3v3H8a4 4 0 0 0-4 4v1.5H3.5A2 2 0 0 1 1.5 12V7.5a5 5 0 0 1 5-5H9Z" /><circle cx="9" cy="5" r="0.6" fill="currentColor" stroke="none" /><path d="M15 21.5h-4a3 3 0 0 1-3-3v-3h8a4 4 0 0 0 4-4V10h1.5a2 2 0 0 1 2 2v4.5a5 5 0 0 1-5 5H15Z" /><circle cx="15" cy="19" r="0.6" fill="currentColor" stroke="none" /></svg>;
+    case "Bash / Linux":
+      return <Terminal size={13} strokeWidth={1.6} />;
+    case "YAML":
+      return <svg {...s}><path d="M6.5 2.5h8l4.5 4.5v14h-12.5Z" /><path d="M14.5 2.5v4.5h4.5" /><path d="M9 13.5h6M9 16.5h6M9 10.5h3" /></svg>;
+    case "AWS":
+      return <svg {...s}><path d="M7 17a4 4 0 0 1-.6-8 5 5 0 0 1 9.7-1.7A4.4 4.4 0 0 1 17 17H7Z" /><path d="M8 20c2.9 1.4 5.7 1.4 8.6 0" /></svg>;
+    case "CI/CD pipelines":
+      return <GitBranch size={13} strokeWidth={1.6} />;
+    default:
+      return <Sparkles size={13} strokeWidth={1.6} />;
+  }
+}
+
 const QUESTS = [
   {
     company: "Unknown Gravity",
@@ -1920,7 +1974,10 @@ function Portfolio() {
         .ap-skill-head svg { width: 18px; height: 18px; }
         .ap-skill-head h3 { font-family: var(--font-display); font-size: 16px; margin: 0; font-weight: 600; }
         .ap-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-        .ap-chip { font-family: var(--font-mono); font-size: 11.5px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--ivory-dim); background: rgba(0,0,0,0.2); }
+        .ap-chip { font-family: var(--font-mono); font-size: 11.5px; padding: 6px 11px 6px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ivory-dim); background: rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 6px; transition: border-color 0.2s ease, transform 0.2s ease; }
+        .ap-chip:hover { border-color: currentColor; transform: translateY(-1px); }
+        .ap-chip-icon { display: inline-flex; opacity: 0.95; }
+        .ap-chip-icon svg { display: block; }
 
         /* ---------- experience / quest log ---------- */
         .ap-quest-list { position: relative; padding-left: 26px; }
@@ -2269,7 +2326,10 @@ function Portfolio() {
                     </div>
                     <div className="ap-chip-row">
                       {g.items.map((it) => (
-                        <span className="ap-chip" key={it}>{it}</span>
+                        <span className="ap-chip" key={it}>
+                          <span className="ap-chip-icon" style={{ color: g.color }}><TechIcon name={it} /></span>
+                          {it}
+                        </span>
                       ))}
                     </div>
                   </GlowBorder>
