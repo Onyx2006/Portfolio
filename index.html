@@ -70,6 +70,32 @@ const PROFILE = {
   photo: "me.jpg",
 };
 
+/* Single shared AudioContext for every sound in the page (background notes
+   + piano strip). Mobile browsers only allow an AudioContext to start/resume
+   from inside a *real* user-gesture handler (a tap), not from a scroll
+   listener or an IntersectionObserver callback. So instead of each component
+   creating (and trying to resume) its own context whenever a note happens to
+   fire, they all share this one instance, and it only ever gets created /
+   resumed from the "Press Start" tap in the boot screen — after that it
+   stays "running" for the rest of the session, so later scroll-triggered
+   notes actually produce sound instead of failing silently on mobile. */
+let sharedAudioCtx = null;
+function getAudioContext() {
+  if (!sharedAudioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    sharedAudioCtx = new AC();
+  }
+  return sharedAudioCtx;
+}
+async function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === "suspended") {
+    try { await ctx.resume(); } catch (e) { /* ignore */ }
+  }
+  return ctx;
+}
+
 /* Musical scale used by the clickable background notes — click one and it
    plays that pitch (Do Re Mi Fa Sol La Si Do). Purely decorative easter egg. */
 const SCALE = [
@@ -379,7 +405,6 @@ function NoteGlyph({ type, size }) {
 // Scattered clickable music notes + a small staff with a drawn melody.
 //Clicking a note plays its pitch via the Web Audio API (do-re-mi...).
 function MusicalBackground({ progress = 0 }) {
-  const ctxRef = useRef(null);
   const [ping, setPing] = useState(null);
   const [sparks, setSparks] = useState([]);
   const pingTimer = useRef(null);
@@ -388,14 +413,13 @@ function MusicalBackground({ progress = 0 }) {
 
   const playTone = async (freq) => {
     try {
-      if (!ctxRef.current) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        ctxRef.current = new AC();
-      }
-      const ctx = ctxRef.current;
+      const ctx = getAudioContext();
+      if (!ctx) return;
       // Some browsers (Safari especially) need resume() to fully finish
       // before any node scheduled on the context will actually be heard —
       // starting the oscillator before that resolves can play silently.
+      // In practice this context is already "running" by the time any note
+      // fires, since it's unlocked once from the Press Start tap.
       if (ctx.state === "suspended") {
         await ctx.resume();
       }
@@ -972,7 +996,6 @@ const PIANO_MELODY = [
 
 function PianoStrip() {
 
-  const ctxRef = useRef(null);
   const wrapRef = useRef(null);
   const timers = useRef([]);
   const hasPlayedRef = useRef(false);
@@ -981,25 +1004,20 @@ function PianoStrip() {
   const [isPlaying, setIsPlaying] = useState(false);
 
 
-  // AUDIO CONTEXT
+  // AUDIO CONTEXT — shared with MusicalBackground; see getAudioContext().
   const getCtx = async () => {
-    if (!ctxRef.current) {
-      const AC =
-        window.AudioContext ||
-        window.webkitAudioContext;
+    const ctx = getAudioContext();
+    if (!ctx) return null;
 
-      ctxRef.current = new AC();
-    }
-
-    if (ctxRef.current.state === "suspended") {
+    if (ctx.state === "suspended") {
       try {
-        await ctxRef.current.resume();
+        await ctx.resume();
       } catch (e) {
         // Browser requires user interaction
       }
     }
 
-    return ctxRef.current;
+    return ctx;
   };
 
 
@@ -1833,6 +1851,25 @@ function Portfolio() {
   const sectionRefs = useRef({});
   const glowRef = useRef(null);
 
+  // Lock scrolling until "Press Start" is hit — only the boot terminal
+  // should be visible/interactive at first, the rest of the page (which is
+  // already rendered below it) shouldn't be reachable by scrolling past it.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    if (!bootDone) {
+      const prevHtmlOverflow = html.style.overflow;
+      const prevBodyOverflow = body.style.overflow;
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      window.scrollTo(0, 0);
+      return () => {
+        html.style.overflow = prevHtmlOverflow;
+        body.style.overflow = prevBodyOverflow;
+      };
+    }
+  }, [bootDone]);
+
   // boot terminal typewriter
   useEffect(() => {
     let lineIdx = 0;
@@ -2112,26 +2149,28 @@ function Portfolio() {
 
         /* ---------- boot overlay ---------- */
         .ap-boot {
-          position: absolute; inset: 0; z-index: 20; background: var(--void);
+          position: fixed; inset: 0; z-index: 300; background: var(--void);
           display: flex; align-items: center; justify-content: center; padding: 24px;
+          min-height: 100vh; min-height: 100dvh;
           transition: opacity 0.6s ease, visibility 0.6s;
         }
         .ap-boot.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .ap-boot-panel {
-          width: 100%; max-width: 560px; border: 1px solid var(--line); border-radius: 10px;
+          width: 100%; max-width: 760px; border: 1px solid var(--line); border-radius: 14px;
           background: linear-gradient(180deg, var(--ebony), var(--void));
           box-shadow: 0 0 60px rgba(76,231,180,0.06), inset 0 0 40px rgba(0,0,0,0.4);
-          padding: 22px 24px 26px; font-family: var(--font-mono);
+          padding: clamp(24px, 4vw, 40px) clamp(26px, 4.5vw, 44px) clamp(28px, 4.5vw, 40px);
+          font-family: var(--font-mono);
         }
-        .ap-boot-bar { display: flex; gap: 6px; margin-bottom: 16px; }
-        .ap-boot-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
-        .ap-boot-lines { min-height: 168px; font-size: 12.5px; line-height: 1.9; color: var(--circuit); }
+        .ap-boot-bar { display: flex; gap: 8px; margin-bottom: clamp(16px, 2.4vw, 22px); }
+        .ap-boot-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+        .ap-boot-lines { min-height: 220px; font-size: clamp(13.5px, 1.6vw, 17px); line-height: 2; color: var(--circuit); }
         .ap-boot-lines .done { color: var(--ivory-dim); }
-        .ap-boot-cursor { display: inline-block; width: 7px; height: 13px; background: var(--circuit); margin-left: 2px; animation: apBlink 1s step-end infinite; vertical-align: -2px; }
+        .ap-boot-cursor { display: inline-block; width: 8px; height: 16px; background: var(--circuit); margin-left: 2px; animation: apBlink 1s step-end infinite; vertical-align: -3px; }
         @keyframes apBlink { 50% { opacity: 0; } }
         .ap-start-btn {
-          margin-top: 18px; width: 100%; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em;
-          font-size: 13px; padding: 13px 18px; border-radius: 6px; border: 1px solid var(--circuit);
+          margin-top: clamp(18px, 2.6vw, 26px); width: 100%; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em;
+          font-size: clamp(13px, 1.4vw, 16px); padding: clamp(14px, 1.8vw, 18px) 20px; border-radius: 8px; border: 1px solid var(--circuit);
           background: rgba(76,231,180,0.08); color: var(--circuit); cursor: pointer;
           display: flex; align-items: center; justify-content: center; gap: 10px;
           transition: background 0.2s ease, transform 0.15s ease; opacity: 0; transform: translateY(6px);
@@ -2459,7 +2498,7 @@ function Portfolio() {
               </div>
               <button
                 className={`ap-start-btn ${displayed.length >= BOOT_LINES.length ? "is-ready" : ""}`}
-                onClick={() => setBootDone(true)}
+                onClick={() => { unlockAudio(); setBootDone(true); }}
                 disabled={displayed.length < BOOT_LINES.length}
               >
                 <Gamepad2 size={15} /> PRESS START
