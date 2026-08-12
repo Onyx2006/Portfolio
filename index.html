@@ -172,7 +172,7 @@ const QUESTS = [
     company: "Unknown Gravity",
     place: "Málaga",
     role: "Full-Stack Developer & QA Intern",
-    time: "Mar 2026 – Jun 2026",
+    time: "Mar 2025 – Jun 2025",
     bullets: [
       "Ran QA passes using Postman, Playwright, Selenium, Slither and OWASP methodology.",
       "Worked as a fullstack developer building a SaaS platform for tokenizing financial assets.",
@@ -656,6 +656,1051 @@ function SnakeGame() {
   );
 }
 
+/* Interactive footer orchestra.
+ * 18 playable piano keys + cinematic ambient orchestration.
+ * All music is an original composition.*/
+
+const PIANO_NOTES = [
+  { name: "D4" },
+  { name: "D#4" },
+  { name: "E4" },
+  { name: "F4" },
+  { name: "F#4" },
+  { name: "G4" },
+  { name: "G#4" },
+  { name: "A4" },
+  { name: "A#4" },
+  { name: "B4" },
+  { name: "C5" },
+  { name: "C#5" },
+  { name: "D5" },
+  { name: "D#5" },
+  { name: "E5" },
+  { name: "F5" },
+  { name: "F#5" },
+  { name: "G5" },
+].map((n, i) => ({
+  ...n,
+  freq: 440 * Math.pow(2, (62 + i - 69) / 12),
+}));
+
+
+const PIANO_MELODY = [
+
+  // INTRO — piano + very soft strings
+  { notes: [0, 3, 7], dur: 900, chord: true },
+  { notes: [2, 5, 10], dur: 700, chord: true },
+  { notes: [3, 7, 12], dur: 1100, chord: true },
+
+  // First movement
+  { notes: [5, 8, 12], dur: 600, chord: true },
+  { notes: [3, 7, 10], dur: 450, chord: true },
+  { notes: [5, 8, 12], dur: 700, chord: true },
+  { notes: [7, 10, 14], dur: 950, chord: true },
+
+  // Faster movement
+  { notes: [5, 8, 12], dur: 420, chord: true },
+  { notes: [3, 7, 10], dur: 420, chord: true },
+  { notes: [2, 5, 10], dur: 560, chord: true },
+  { notes: [0, 3, 7, 12], dur: 900, chord: true },
+
+  // Emotional section
+  { notes: [7, 10, 14], dur: 650, chord: true },
+  { notes: [5, 8, 12], dur: 480, chord: true },
+  { notes: [3, 7, 10], dur: 780, chord: true },
+  { notes: [0, 3, 7], dur: 1050, chord: true },
+
+  // Rhythmic section
+  { notes: [3, 7, 12], dur: 380, chord: true },
+  { notes: [5, 8, 12], dur: 380, chord: true },
+  { notes: [7, 10, 14], dur: 480, chord: true },
+  { notes: [5, 8, 12, 15], dur: 680, chord: true },
+
+  { notes: [3, 7, 10], dur: 330, chord: true },
+  { notes: [5, 8, 12], dur: 330, chord: true },
+  { notes: [7, 10, 14], dur: 430, chord: true },
+  { notes: [10, 14, 17], dur: 780, chord: true },
+
+  // Relaxation
+  { notes: [7, 10, 14], dur: 650, chord: true },
+  { notes: [5, 8, 12], dur: 600, chord: true },
+  { notes: [3, 7, 10], dur: 820, chord: true },
+
+  // Final descent
+  { notes: [2, 5, 10], dur: 850, chord: true },
+  { notes: [0, 3, 7], dur: 1050, chord: true },
+  { notes: [3, 7, 10, 15], dur: 1250, chord: true },
+  { notes: [5, 8, 12, 17], dur: 1450, chord: true },
+
+  // Final chord
+  { notes: [0, 3, 7, 12], dur: 2400, chord: true },
+];
+
+
+function PianoStrip() {
+
+  const ctxRef = useRef(null);
+  const wrapRef = useRef(null);
+  const timers = useRef([]);
+  const hasPlayedRef = useRef(false);
+
+  const [activeKeys, setActiveKeys] = useState(() => new Set());
+  const [isPlaying, setIsPlaying] = useState(false);
+
+
+  // AUDIO CONTEXT
+  const getCtx = async () => {
+    if (!ctxRef.current) {
+      const AC =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+      ctxRef.current = new AC();
+    }
+
+    if (ctxRef.current.state === "suspended") {
+      try {
+        await ctxRef.current.resume();
+      } catch (e) {
+        // Browser requires user interaction
+      }
+    }
+
+    return ctxRef.current;
+  };
+
+
+  // MASTER REVERB
+  const createReverb = (ctx) => {
+    const convolver = ctx.createConvolver();
+    const length = ctx.sampleRate * 2.2;
+    const impulse = ctx.createBuffer(
+      2,
+      length,
+      ctx.sampleRate
+    );
+
+    for (let channel = 0; channel < 2; channel++) {
+      const data = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        data[i] =
+          (Math.random() * 2 - 1) *
+          Math.pow(1 - i / length, 2.5);
+      }
+    }
+
+    convolver.buffer = impulse;
+    return convolver;
+  };
+
+
+  // PIANO
+  const playNote = useCallback(
+    async (
+      freq,
+      {
+        sustain = 1.5,
+        gain = 0.06
+      } = {}
+    ) => {
+
+      try {
+        const ctx = await getCtx();
+        const t0 = ctx.currentTime;
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(
+          0.0001,
+          t0
+        );
+
+        master.gain.exponentialRampToValueAtTime(
+          gain,
+          t0 + 0.008
+        );
+
+        master.gain.exponentialRampToValueAtTime(
+          gain * 0.5,
+          t0 + 0.18
+        );
+
+        master.gain.exponentialRampToValueAtTime(
+          gain * 0.18,
+          t0 + sustain * 0.65
+        );
+
+        master.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + sustain
+        );
+
+
+        const filter =
+          ctx.createBiquadFilter();
+
+        filter.type = "lowpass";
+
+        filter.frequency.setValueAtTime(
+          Math.min(freq * 9, 8000),
+          t0
+        );
+
+        filter.frequency.exponentialRampToValueAtTime(
+          Math.min(freq * 3.5, 4000),
+          t0 + sustain
+        );
+
+        filter.Q.value = 0.65;
+
+
+        master.connect(filter);
+        filter.connect(ctx.destination);
+
+
+        /* Piano harmonics */
+        const harmonics = [
+          { ratio: 1, gain: 1.00 },
+          { ratio: 2, gain: 0.28 },
+          { ratio: 3, gain: 0.13 },
+          { ratio: 4, gain: 0.055 },
+          { ratio: 5, gain: 0.025 },
+        ];
+
+
+        harmonics.forEach(
+          ({ ratio, gain: harmonicGain }) => {
+            const osc =
+              ctx.createOscillator();
+
+            const g =
+              ctx.createGain();
+
+            osc.type = "sine";
+
+            osc.frequency.setValueAtTime(
+              freq * ratio,
+              t0
+            );
+
+
+            g.gain.setValueAtTime(
+              harmonicGain,
+              t0
+            );
+
+            g.gain.exponentialRampToValueAtTime(
+              Math.max(
+                harmonicGain * 0.08,
+                0.0001
+              ),
+              t0 + sustain * 0.7
+            );
+
+            osc.connect(g);
+            g.connect(master);
+
+            osc.start(t0);
+            osc.stop(
+              t0 + sustain + 0.1
+            );
+          }
+        );
+
+
+        /* Piano hammer */
+        const attack =
+          ctx.createOscillator();
+
+        const attackGain =
+          ctx.createGain();
+
+        attack.type = "triangle";
+
+        attack.frequency.value =
+          freq * 2.7;
+
+        attackGain.gain.setValueAtTime(
+          0.018,
+          t0
+        );
+
+        attackGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + 0.045
+        );
+
+        attack.connect(attackGain);
+        attackGain.connect(master);
+
+        attack.start(t0);
+        attack.stop(t0 + 0.06);
+      } catch (e) {
+        // Audio unavailable
+      }
+    },
+    []
+  );
+
+
+  // STRINGS
+  const playStrings = useCallback(
+    async (
+      noteIndexes,
+      {
+        sustain = 1.5,
+        gain = 0.025
+      } = {}
+    ) => {
+      try {
+        const ctx = await getCtx();
+        const t0 = ctx.currentTime;
+        const stringsBus =
+          ctx.createGain();
+        stringsBus.gain.setValueAtTime(
+          0.0001,
+          t0
+        );
+
+        /* Slow string attack */
+        stringsBus.gain.exponentialRampToValueAtTime(
+          gain,
+          t0 + 0.28
+        );
+
+        stringsBus.gain.exponentialRampToValueAtTime(
+          gain * 0.65,
+          t0 + sustain * 0.65
+        );
+
+        stringsBus.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + sustain
+        );
+
+        const filter =
+          ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 2500;
+        filter.Q.value = 0.4;
+
+        stringsBus.connect(filter);
+        filter.connect(ctx.destination);
+
+        noteIndexes.forEach(
+          (index) => {
+            const note =
+              PIANO_NOTES[index];
+            if (!note) return;
+
+            /* Main string */
+            const osc =
+              ctx.createOscillator();
+
+            const g =
+              ctx.createGain();
+
+            osc.type = "sawtooth";
+
+            osc.frequency.value =
+              note.freq;
+
+            g.gain.value =
+              0.07;
+
+            osc.connect(g);
+            g.connect(stringsBus);
+
+            osc.start(t0);
+            osc.stop(
+              t0 + sustain + 0.15
+            );
+
+            /* Slight detuning */
+            const osc2 =
+              ctx.createOscillator();
+
+            const g2 =
+              ctx.createGain();
+
+            osc2.type = "sawtooth";
+
+            osc2.frequency.value =
+              note.freq;
+
+            osc2.detune.value = 6;
+
+            g2.gain.value =
+              0.045;
+
+            osc2.connect(g2);
+            g2.connect(stringsBus);
+
+            osc2.start(t0 + 0.015);
+            osc2.stop(
+              t0 + sustain + 0.15
+            );
+          }
+        );
+      } catch (e) {
+        // Strings unavailable
+      }
+    },
+    []
+  );
+
+
+  /* -------------------------------------------------------------------
+   * CELLO / LOW STRINGS
+   * ---------------------------------------------------------------- */
+
+  const playCello = useCallback(
+    async (
+      noteIndexes,
+      {
+        sustain = 1.5,
+        gain = 0.025
+      } = {}
+    ) => {
+
+      try {
+
+        const ctx = await getCtx();
+
+        const t0 = ctx.currentTime;
+
+
+        const lowest =
+          PIANO_NOTES[noteIndexes[0]];
+
+        if (!lowest) return;
+
+
+        const celloBus =
+          ctx.createGain();
+
+
+        celloBus.gain.setValueAtTime(
+          0.0001,
+          t0
+        );
+
+
+        celloBus.gain.exponentialRampToValueAtTime(
+          gain,
+          t0 + 0.18
+        );
+
+
+        celloBus.gain.exponentialRampToValueAtTime(
+          gain * 0.35,
+          t0 + sustain * 0.7
+        );
+
+
+        celloBus.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + sustain
+        );
+
+
+        const filter =
+          ctx.createBiquadFilter();
+
+        filter.type = "lowpass";
+
+        filter.frequency.value = 900;
+
+
+        celloBus.connect(filter);
+
+        filter.connect(ctx.destination);
+
+
+        const cello =
+          ctx.createOscillator();
+
+
+        const celloGain =
+          ctx.createGain();
+
+
+        cello.type = "triangle";
+
+
+        /* One octave below */
+
+        cello.frequency.value =
+          lowest.freq / 2;
+
+
+        celloGain.gain.value =
+          0.45;
+
+
+        cello.connect(celloGain);
+
+        celloGain.connect(celloBus);
+
+
+        cello.start(t0);
+
+        cello.stop(
+          t0 + sustain + 0.1
+        );
+
+      } catch (e) {
+
+        // Cello unavailable
+      }
+    },
+    []
+  );
+
+
+  /* -------------------------------------------------------------------
+   * AMBIENT PAD
+   * ---------------------------------------------------------------- */
+
+  const playPad = useCallback(
+    async (
+      noteIndexes,
+      {
+        sustain = 1.5,
+        gain = 0.008
+      } = {}
+    ) => {
+
+      try {
+
+        const ctx = await getCtx();
+
+        const t0 = ctx.currentTime;
+
+
+        const pad =
+          ctx.createGain();
+
+
+        pad.gain.setValueAtTime(
+          0.0001,
+          t0
+        );
+
+
+        pad.gain.exponentialRampToValueAtTime(
+          gain,
+          t0 + 0.7
+        );
+
+
+        pad.gain.exponentialRampToValueAtTime(
+          gain * 0.5,
+          t0 + sustain * 0.75
+        );
+
+
+        pad.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + sustain
+        );
+
+
+        const filter =
+          ctx.createBiquadFilter();
+
+        filter.type = "lowpass";
+
+        filter.frequency.value = 1200;
+
+
+        pad.connect(filter);
+
+        filter.connect(ctx.destination);
+
+
+        noteIndexes.forEach(
+          (index) => {
+
+            const note =
+              PIANO_NOTES[index];
+
+            if (!note) return;
+
+
+            const osc =
+              ctx.createOscillator();
+
+
+            const g =
+              ctx.createGain();
+
+
+            osc.type = "sine";
+
+            osc.frequency.value =
+              note.freq / 2;
+
+
+            g.gain.value =
+              0.18;
+
+
+            osc.connect(g);
+
+            g.connect(pad);
+
+
+            osc.start(t0);
+
+            osc.stop(
+              t0 + sustain
+            );
+          }
+        );
+
+      } catch (e) {
+
+        // Pad unavailable
+      }
+    },
+    []
+  );
+
+
+  /* -------------------------------------------------------------------
+   * ORCHESTRA CHORD
+   * ---------------------------------------------------------------- */
+
+  const playOrchestraChord =
+    useCallback(
+      async (
+        notes,
+        {
+          sustain = 1.3,
+          intensity = 1
+        } = {}
+      ) => {
+
+        /* Piano */
+
+        notes.forEach(
+          (index) => {
+
+            const note =
+              PIANO_NOTES[index];
+
+            if (!note) return;
+
+
+            playNote(
+              note.freq,
+              {
+                sustain,
+                gain:
+                  0.045 * intensity
+              }
+            );
+          }
+        );
+
+
+        /* Strings */
+
+        playStrings(
+          notes,
+          {
+            sustain:
+              sustain + 0.15,
+
+            gain:
+              0.025 * intensity
+          }
+        );
+
+
+        /* Cello */
+
+        playCello(
+          notes,
+          {
+            sustain:
+              sustain + 0.1,
+
+            gain:
+              0.022 * intensity
+          }
+        );
+
+
+        /* Ambient pad */
+
+        playPad(
+          notes,
+          {
+            sustain:
+              sustain + 0.3,
+
+            gain:
+              0.007 * intensity
+          }
+        );
+      },
+      [
+        playNote,
+        playStrings,
+        playCello,
+        playPad
+      ]
+    );
+
+
+  /* -------------------------------------------------------------------
+   * KEY FLASH
+   * ---------------------------------------------------------------- */
+
+  const flashKey = useCallback(
+    (i, ms) => {
+
+      setActiveKeys(
+        (prev) =>
+          new Set(prev).add(i)
+      );
+
+
+      const id =
+        window.setTimeout(
+          () => {
+
+            setActiveKeys(
+              (prev) => {
+
+                if (!prev.has(i))
+                  return prev;
+
+
+                const next =
+                  new Set(prev);
+
+                next.delete(i);
+
+                return next;
+              }
+            );
+          },
+          ms
+        );
+
+
+      timers.current.push(id);
+    },
+    []
+  );
+
+
+  /* -------------------------------------------------------------------
+   * MANUAL PIANO
+   * ---------------------------------------------------------------- */
+
+  const pressKey = useCallback(
+    (i) => {
+
+      const note =
+        PIANO_NOTES[i];
+
+      if (!note) return;
+
+
+      playNote(
+        note.freq,
+        {
+          sustain: 1.8,
+          gain: 0.07
+        }
+      );
+
+
+      flashKey(i, 260);
+    },
+    [
+      playNote,
+      flashKey
+    ]
+  );
+
+
+  /* -------------------------------------------------------------------
+   * PLAY ORCHESTRA
+   * ---------------------------------------------------------------- */
+
+  const playMelody =
+    useCallback(
+      () => {
+
+        timers.current.forEach(
+          (id) =>
+            window.clearTimeout(id)
+        );
+
+        timers.current = [];
+
+
+        setIsPlaying(true);
+
+
+        let elapsed = 0;
+
+
+        PIANO_MELODY.forEach(
+          (step, index) => {
+
+            const id =
+              window.setTimeout(
+                () => {
+
+                  const sustain =
+                    (
+                      step.dur +
+                      (step.chord
+                        ? 350
+                        : 150)
+                    ) / 1000;
+
+
+                  /*
+                   * Intensity evolves throughout
+                   * the composition.
+                   */
+
+                  let intensity = 1;
+
+
+                  if (index < 4) {
+                    intensity = 0.72;
+                  }
+
+                  else if (
+                    index >= 15 &&
+                    index < 23
+                  ) {
+                    intensity = 0.9;
+                  }
+
+                  else if (
+                    index >= 23
+                  ) {
+                    intensity = 0.82;
+                  }
+
+
+                  playOrchestraChord(
+                    step.notes,
+                    {
+                      sustain,
+                      intensity
+                    }
+                  );
+
+
+                  /* Illuminate piano keys */
+
+                  step.notes.forEach(
+                    (i) => {
+
+                      flashKey(
+                        i,
+                        Math.min(
+                          step.dur + 100,
+                          1000
+                        )
+                      );
+                    }
+                  );
+                },
+                elapsed
+              );
+
+
+            timers.current.push(id);
+
+
+            elapsed += step.dur;
+          }
+        );
+
+
+        const doneId =
+          window.setTimeout(
+            () =>
+              setIsPlaying(false),
+            elapsed + 600
+          );
+
+
+        timers.current.push(doneId);
+      },
+      [
+        playOrchestraChord,
+        flashKey
+      ]
+    );
+
+
+  /* -------------------------------------------------------------------
+   * AUTOPLAY WHEN SCROLLED INTO VIEW
+   * ---------------------------------------------------------------- */
+
+  useEffect(() => {
+
+    const el =
+      wrapRef.current;
+
+    if (!el) return;
+
+
+    const obs =
+      new IntersectionObserver(
+        (entries) => {
+
+          entries.forEach(
+            (e) => {
+
+              if (
+                e.isIntersecting &&
+                e.intersectionRatio > 0.4 &&
+                !hasPlayedRef.current
+              ) {
+
+                hasPlayedRef.current =
+                  true;
+
+
+                const id =
+                  window.setTimeout(
+                    () =>
+                      playMelody(),
+                    300
+                  );
+
+
+                timers.current.push(id);
+              }
+            }
+          );
+        },
+        {
+          threshold: [0, 0.4]
+        }
+      );
+
+
+    obs.observe(el);
+
+
+    return () =>
+      obs.disconnect();
+
+  }, [playMelody]);
+
+
+  /* -------------------------------------------------------------------
+   * CLEANUP
+   * ---------------------------------------------------------------- */
+
+  useEffect(
+    () =>
+      () =>
+        timers.current.forEach(
+          (id) =>
+            window.clearTimeout(id)
+        ),
+    []
+  );
+
+
+  /* -------------------------------------------------------------------
+   * UI
+   * ---------------------------------------------------------------- */
+
+  return (
+    <div
+      className="ap-piano"
+      ref={wrapRef}
+    >
+
+      <div className="ap-piano-head">
+
+        <div className="ap-eyebrow">
+          <Music2 size={13} />
+          07 // PLAY IT YOURSELF
+        </div>
+
+
+        <button
+          type="button"
+          className="ap-piano-replay"
+          onClick={playMelody}
+          disabled={isPlaying}
+        >
+
+          <Play size={12} />
+
+          {isPlaying
+            ? "Ringing…"
+            : "Repeat melody"}
+
+        </button>
+
+      </div>
+
+
+      <div
+        className="ap-keys"
+        role="group"
+        aria-label="Piano interactivo"
+      >
+
+        {PIANO_NOTES.map(
+          (n, i) => (
+
+            <button
+              key={n.name}
+              type="button"
+
+              className={
+                `ap-key ${
+                  activeKeys.has(i)
+                    ? "is-active"
+                    : ""
+                }`
+              }
+
+              onClick={() =>
+                pressKey(i)
+              }
+
+              aria-label={
+                `Nota ${n.name}`
+              }
+            >
+
+              <span className="ap-key-label">
+                {n.name.replace(/\d/, "")}
+              </span>
+
+            </button>
+          )
+        )}
+
+      </div>
+
+
+      <div className="ap-piano-hint">
+        Una pequeña orquesta toca al llegar aquí — y tú también puedes tocar el piano.
+      </div>
+
+    </div>
+  );
+}
+
 function Portfolio() {
   const [bootDone, setBootDone] = useState(false);
   const [displayed, setDisplayed] = useState([]);
@@ -1077,13 +2122,35 @@ function Portfolio() {
         .ap-contact-btn.primary { background: var(--circuit); color: var(--void); border-color: var(--circuit); font-weight: 700; }
         .ap-contact-btn.primary:hover { background: var(--ivory); border-color: var(--ivory); color: var(--void); }
 
-        /* ---------- footer / piano strip ---------- */
+        /* ---------- footer / interactive piano strip ---------- */
         .ap-footer { padding: 0 24px 50px; max-width: 1080px; margin: 0 auto; }
-        .ap-keys { display: flex; height: 46px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 22px; }
-        .ap-key { flex: 1; background: var(--ebony-2); border-right: 1px solid var(--line); transition: transform 0.15s ease, background 0.15s ease; cursor: pointer; }
-        .ap-key:hover { background: var(--circuit); transform: translateY(3px); }
+        .ap-piano { margin-bottom: 22px; }
+        .ap-piano-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+        .ap-piano-replay {
+          display: inline-flex; align-items: center; gap: 6px; background: var(--ebony-2); border: 1px solid var(--line);
+          color: var(--ivory-dim); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+          padding: 6px 11px; border-radius: 6px; cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .ap-piano-replay svg { width: 12px; height: 12px; }
+        .ap-piano-replay:hover:not(:disabled) { border-color: var(--circuit); color: var(--circuit); }
+        .ap-piano-replay:disabled { opacity: 0.55; cursor: default; }
+        .ap-keys { display: flex; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+        .ap-key {
+          flex: 1; background: var(--ebony-2); border: none; border-right: 1px solid var(--line);
+          transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+          cursor: pointer; padding: 0 0 6px; margin: 0; font: inherit;
+          display: flex; align-items: flex-end; justify-content: center; position: relative;
+        }
         .ap-key:last-child { border-right: none; }
-        .ap-footer-line { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); text-align: center; }
+        .ap-key:hover, .ap-key:focus-visible { background: var(--circuit); transform: translateY(3px); outline: none; }
+        .ap-key.is-active { background: var(--circuit); transform: translateY(3px); box-shadow: 0 0 16px 1px rgba(76,231,180,0.65); }
+        .ap-key-label {
+          font-family: var(--font-mono); font-size: 9.5px; color: rgba(8,10,15,0.7);
+          opacity: 0; transition: opacity 0.12s ease; pointer-events: none; user-select: none;
+        }
+        .ap-key:hover .ap-key-label, .ap-key.is-active .ap-key-label, .ap-key:focus-visible .ap-key-label { opacity: 1; }
+        .ap-piano-hint { font-family: var(--font-mono); font-size: 11px; color: var(--ivory-dim); text-align: center; margin-top: 10px; opacity: 0.75; }
+        .ap-footer-line { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); text-align: center; margin-top: 3em}
         .ap-footer-line svg { width: 12px; height: 12px; display: inline; vertical-align: -2px; margin: 0 4px; color: var(--circuit); }
 
         /* ---------- musical background ---------- */
@@ -1469,9 +2536,7 @@ function Portfolio() {
         </section>
 
         <footer className="ap-footer">
-          <div className="ap-keys" aria-hidden="true">
-            {Array.from({ length: 18 }).map((_, i) => <div className="ap-key" key={i} />)}
-          </div>
+          <PianoStrip />
           <div className="ap-footer-line">
             Built with React <Music2 /> composed in Marbella <GitBranch /> shipping to Ireland
           </div>
