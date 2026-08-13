@@ -37,6 +37,1304 @@
      browser, and (thanks to data-type="module") runs it as a real ES module
      so the import map above is honored. This is what makes a single static
      .html file with JSX inside work on GitHub Pages with zero build step. -->
+<!-- BlastScript language core, compiled from https://github.com/Onyx2006/BlastScript
+     (packages/core, built with tsc) and concatenated into one browser-ready
+     script. Exposes window.BlastScriptCore for the live console below. -->
+<script>
+/* BlastScript core — bundled for the browser (compiled from packages/core/src via tsc, then concatenated). */
+(function () {
+"use strict";
+
+// ---- tokens.js ----
+// Token kinds for BlastScript.
+// Keywords are all arcade/shooter vocabulary — see README.md for the full glossary.
+var TokenType;
+(function (TokenType) {
+    // Literals
+    TokenType["NUMBER"] = "NUMBER";
+    TokenType["STRING"] = "STRING";
+    TokenType["IDENT"] = "IDENT";
+    // Keywords — declarations
+    TokenType["SPAWN"] = "SPAWN";
+    TokenType["LOADOUT"] = "LOADOUT";
+    TokenType["WEAPON"] = "WEAPON";
+    // Keywords — control flow
+    TokenType["AIM"] = "AIM";
+    TokenType["ELSE"] = "ELSE";
+    TokenType["RESPAWN"] = "RESPAWN";
+    TokenType["WAVE"] = "WAVE";
+    TokenType["FLEE"] = "FLEE";
+    TokenType["RELOAD"] = "RELOAD";
+    TokenType["SCORE"] = "SCORE";
+    // Keywords — calls / io / modules
+    TokenType["HIT"] = "HIT";
+    TokenType["SHOUT"] = "SHOUT";
+    TokenType["LOOT"] = "LOOT";
+    // Keywords — literals
+    TokenType["ALIVE"] = "ALIVE";
+    TokenType["DEAD"] = "DEAD";
+    TokenType["VOID"] = "VOID";
+    // Types (used after `:`)
+    TokenType["TYPE_NUM"] = "TYPE_NUM";
+    TokenType["TYPE_STR"] = "TYPE_STR";
+    TokenType["TYPE_BOOL"] = "TYPE_BOOL";
+    TokenType["TYPE_ARR"] = "TYPE_ARR";
+    TokenType["TYPE_FN"] = "TYPE_FN";
+    TokenType["TYPE_VOID"] = "TYPE_VOID";
+    TokenType["TYPE_ANY"] = "TYPE_ANY";
+    // Punctuation
+    TokenType["LPAREN"] = "LPAREN";
+    TokenType["RPAREN"] = "RPAREN";
+    TokenType["LBRACE"] = "LBRACE";
+    TokenType["RBRACE"] = "RBRACE";
+    TokenType["LBRACKET"] = "LBRACKET";
+    TokenType["RBRACKET"] = "RBRACKET";
+    TokenType["COMMA"] = "COMMA";
+    TokenType["COLON"] = "COLON";
+    TokenType["SEMI"] = "SEMI";
+    TokenType["ARROW"] = "ARROW";
+    // Operators
+    TokenType["PLUS"] = "PLUS";
+    TokenType["MINUS"] = "MINUS";
+    TokenType["STAR"] = "STAR";
+    TokenType["SLASH"] = "SLASH";
+    TokenType["PERCENT"] = "PERCENT";
+    TokenType["ASSIGN"] = "ASSIGN";
+    TokenType["EQ"] = "EQ";
+    TokenType["NEQ"] = "NEQ";
+    TokenType["LT"] = "LT";
+    TokenType["LTE"] = "LTE";
+    TokenType["GT"] = "GT";
+    TokenType["GTE"] = "GTE";
+    TokenType["AND"] = "AND";
+    TokenType["OR"] = "OR";
+    TokenType["NOT"] = "NOT";
+    TokenType["EOF"] = "EOF";
+})(TokenType || (TokenType = {}));
+const KEYWORDS = {
+    spawn: TokenType.SPAWN,
+    loadout: TokenType.LOADOUT,
+    weapon: TokenType.WEAPON,
+    aim: TokenType.AIM,
+    else: TokenType.ELSE,
+    respawn: TokenType.RESPAWN,
+    wave: TokenType.WAVE,
+    flee: TokenType.FLEE,
+    reload: TokenType.RELOAD,
+    score: TokenType.SCORE,
+    hit: TokenType.HIT,
+    shout: TokenType.SHOUT,
+    loot: TokenType.LOOT,
+    alive: TokenType.ALIVE,
+    dead: TokenType.DEAD,
+    void: TokenType.VOID,
+    num: TokenType.TYPE_NUM,
+    str: TokenType.TYPE_STR,
+    bool: TokenType.TYPE_BOOL,
+    arr: TokenType.TYPE_ARR,
+    fn: TokenType.TYPE_FN,
+    any: TokenType.TYPE_ANY,
+};
+
+
+// ---- lexer.js ----
+class LexError extends Error {
+    constructor(message, line, col) {
+        super(`${message} (line ${line}, col ${col})`);
+        this.line = line;
+        this.col = col;
+        this.name = "LexError";
+    }
+}
+const SIMPLE = {
+    "(": TokenType.LPAREN,
+    ")": TokenType.RPAREN,
+    "{": TokenType.LBRACE,
+    "}": TokenType.RBRACE,
+    "[": TokenType.LBRACKET,
+    "]": TokenType.RBRACKET,
+    ",": TokenType.COMMA,
+    ":": TokenType.COLON,
+    ";": TokenType.SEMI,
+    "+": TokenType.PLUS,
+    "-": TokenType.MINUS,
+    "*": TokenType.STAR,
+    "%": TokenType.PERCENT,
+};
+function tokenize(source) {
+    const tokens = [];
+    let i = 0;
+    let line = 1;
+    let col = 1;
+    const peek = (offset = 0) => source[i + offset];
+    const advance = () => {
+        const c = source[i++];
+        if (c === "\n") {
+            line++;
+            col = 1;
+        }
+        else {
+            col++;
+        }
+        return c;
+    };
+    while (i < source.length) {
+        const c = peek();
+        // Whitespace
+        if (c === " " || c === "\t" || c === "\r" || c === "\n") {
+            advance();
+            continue;
+        }
+        // Comments: // line comments — arcade flavor allows `// gg` etc, nothing special needed
+        if (c === "/" && peek(1) === "/") {
+            while (i < source.length && peek() !== "\n")
+                advance();
+            continue;
+        }
+        const startLine = line;
+        const startCol = col;
+        // Strings
+        if (c === '"' || c === "'") {
+            const quote = c;
+            advance();
+            let value = "";
+            while (i < source.length && peek() !== quote) {
+                let ch = advance();
+                if (ch === "\\") {
+                    const next = advance();
+                    if (next === "n")
+                        ch = "\n";
+                    else if (next === "t")
+                        ch = "\t";
+                    else
+                        ch = next;
+                }
+                value += ch;
+            }
+            if (i >= source.length) {
+                throw new LexError("Unterminated string literal", startLine, startCol);
+            }
+            advance(); // closing quote
+            tokens.push({ type: TokenType.STRING, value, line: startLine, col: startCol });
+            continue;
+        }
+        // Numbers
+        if (/[0-9]/.test(c)) {
+            let value = "";
+            while (i < source.length && /[0-9]/.test(peek()))
+                value += advance();
+            if (peek() === "." && /[0-9]/.test(peek(1))) {
+                value += advance();
+                while (i < source.length && /[0-9]/.test(peek()))
+                    value += advance();
+            }
+            tokens.push({ type: TokenType.NUMBER, value, line: startLine, col: startCol });
+            continue;
+        }
+        // Identifiers / keywords
+        if (/[a-zA-Z_]/.test(c)) {
+            let value = "";
+            while (i < source.length && /[a-zA-Z0-9_]/.test(peek()))
+                value += advance();
+            const kw = KEYWORDS[value];
+            tokens.push({ type: kw ?? TokenType.IDENT, value, line: startLine, col: startCol });
+            continue;
+        }
+        // Two-char operators
+        const two = c + (peek(1) ?? "");
+        const twoCharMap = {
+            "=>": TokenType.ARROW,
+            "==": TokenType.EQ,
+            "!=": TokenType.NEQ,
+            "<=": TokenType.LTE,
+            ">=": TokenType.GTE,
+            "&&": TokenType.AND,
+            "||": TokenType.OR,
+        };
+        if (twoCharMap[two]) {
+            advance();
+            advance();
+            tokens.push({ type: twoCharMap[two], value: two, line: startLine, col: startCol });
+            continue;
+        }
+        // Single-char operators
+        const oneCharMap = {
+            "=": TokenType.ASSIGN,
+            "<": TokenType.LT,
+            ">": TokenType.GT,
+            "!": TokenType.NOT,
+            "/": TokenType.SLASH,
+        };
+        if (oneCharMap[c]) {
+            advance();
+            tokens.push({ type: oneCharMap[c], value: c, line: startLine, col: startCol });
+            continue;
+        }
+        if (SIMPLE[c]) {
+            advance();
+            tokens.push({ type: SIMPLE[c], value: c, line: startLine, col: startCol });
+            continue;
+        }
+        throw new LexError(`Unexpected character '${c}'`, line, col);
+    }
+    tokens.push({ type: TokenType.EOF, value: "", line, col });
+    return tokens;
+}
+
+
+// ---- parser.js ----
+class ParseError extends Error {
+    constructor(message, line, col) {
+        super(`${message} (line ${line}, col ${col})`);
+        this.line = line;
+        this.col = col;
+        this.name = "ParseError";
+    }
+}
+const TYPE_TOKENS = {
+    [TokenType.TYPE_NUM]: "num",
+    [TokenType.TYPE_STR]: "str",
+    [TokenType.TYPE_BOOL]: "bool",
+    [TokenType.TYPE_ARR]: "arr",
+    [TokenType.TYPE_FN]: "fn",
+    [TokenType.TYPE_VOID]: "void",
+    [TokenType.TYPE_ANY]: "any",
+};
+class Parser {
+    constructor(tokens) {
+        this.tokens = tokens;
+        this.pos = 0;
+    }
+    parse() {
+        const body = [];
+        while (!this.check(TokenType.EOF)) {
+            body.push(this.statement());
+        }
+        return { kind: "Program", body };
+    }
+    // ---- helpers ----
+    peek(offset = 0) {
+        return this.tokens[Math.min(this.pos + offset, this.tokens.length - 1)];
+    }
+    check(type) {
+        return this.peek().type === type;
+    }
+    advance() {
+        const t = this.tokens[this.pos];
+        if (this.pos < this.tokens.length - 1)
+            this.pos++;
+        return t;
+    }
+    match(...types) {
+        if (types.includes(this.peek().type)) {
+            this.advance();
+            return true;
+        }
+        return false;
+    }
+    expect(type, message) {
+        if (this.check(type))
+            return this.advance();
+        const t = this.peek();
+        throw new ParseError(`${message}, got '${t.value || t.type}'`, t.line, t.col);
+    }
+    maybeSemi() {
+        // Semicolons are optional statement separators in BlastScript.
+        this.match(TokenType.SEMI);
+    }
+    // ---- statements ----
+    statement() {
+        const t = this.peek();
+        switch (t.type) {
+            case TokenType.SPAWN:
+            case TokenType.LOADOUT:
+                return this.varDecl();
+            case TokenType.WEAPON:
+                return this.weaponDecl();
+            case TokenType.AIM:
+                return this.aimStmt();
+            case TokenType.RESPAWN:
+                return this.respawnStmt();
+            case TokenType.WAVE:
+                return this.waveStmt();
+            case TokenType.SCORE:
+                return this.scoreStmt();
+            case TokenType.FLEE:
+                this.advance();
+                this.maybeSemi();
+                return { kind: "FleeStmt", line: t.line };
+            case TokenType.RELOAD:
+                this.advance();
+                this.maybeSemi();
+                return { kind: "ReloadStmt", line: t.line };
+            case TokenType.SHOUT:
+                return this.shoutStmt();
+            case TokenType.LOOT:
+                return this.lootStmt();
+            case TokenType.LBRACE:
+                return this.block();
+            default:
+                return this.exprStmt();
+        }
+    }
+    typeAnnotation() {
+        if (!this.match(TokenType.COLON))
+            return undefined;
+        const t = this.advance();
+        const mapped = TYPE_TOKENS[t.type];
+        if (!mapped)
+            throw new ParseError(`Expected a type after ':'`, t.line, t.col);
+        return mapped;
+    }
+    varDecl() {
+        const startTok = this.advance(); // spawn | loadout
+        const constant = startTok.type === TokenType.LOADOUT;
+        const name = this.expect(TokenType.IDENT, "Expected identifier").value;
+        const typeAnnotation = this.typeAnnotation();
+        this.expect(TokenType.ASSIGN, "Expected '=' in declaration");
+        const init = this.expression();
+        this.maybeSemi();
+        return { kind: "VarDecl", constant, name, typeAnnotation, init, line: startTok.line };
+    }
+    paramList() {
+        this.expect(TokenType.LPAREN, "Expected '(' after weapon name");
+        const params = [];
+        if (!this.check(TokenType.RPAREN)) {
+            do {
+                const name = this.expect(TokenType.IDENT, "Expected parameter name").value;
+                const typeAnnotation = this.typeAnnotation();
+                params.push({ name, typeAnnotation });
+            } while (this.match(TokenType.COMMA));
+        }
+        this.expect(TokenType.RPAREN, "Expected ')' after parameters");
+        return params;
+    }
+    weaponDecl() {
+        const startTok = this.advance(); // weapon
+        const name = this.expect(TokenType.IDENT, "Expected weapon name").value;
+        const params = this.paramList();
+        let returnType;
+        if (this.match(TokenType.ARROW)) {
+            const t = this.advance();
+            const mapped = TYPE_TOKENS[t.type];
+            if (!mapped)
+                throw new ParseError(`Expected a return type after '=>'`, t.line, t.col);
+            returnType = mapped;
+        }
+        const body = this.block();
+        return { kind: "WeaponDecl", name, params, returnType, body, line: startTok.line };
+    }
+    block() {
+        this.expect(TokenType.LBRACE, "Expected '{'");
+        const body = [];
+        while (!this.check(TokenType.RBRACE) && !this.check(TokenType.EOF)) {
+            body.push(this.statement());
+        }
+        this.expect(TokenType.RBRACE, "Expected '}'");
+        return { kind: "Block", body };
+    }
+    aimStmt() {
+        const startTok = this.advance(); // aim
+        this.expect(TokenType.LPAREN, "Expected '(' after aim");
+        const test = this.expression();
+        this.expect(TokenType.RPAREN, "Expected ')' after condition");
+        const consequent = this.block();
+        let alternate;
+        if (this.match(TokenType.ELSE)) {
+            alternate = this.check(TokenType.AIM) ? this.aimStmt() : this.block();
+        }
+        return { kind: "AimStmt", test, consequent, alternate, line: startTok.line };
+    }
+    respawnStmt() {
+        const startTok = this.advance(); // respawn
+        this.expect(TokenType.LPAREN, "Expected '(' after respawn");
+        const test = this.expression();
+        this.expect(TokenType.RPAREN, "Expected ')' after condition");
+        const body = this.block();
+        return { kind: "RespawnStmt", test, body, line: startTok.line };
+    }
+    waveStmt() {
+        const startTok = this.advance(); // wave
+        this.expect(TokenType.LPAREN, "Expected '(' after wave");
+        const init = this.check(TokenType.SEMI) ? undefined : this.statement();
+        if (!init)
+            this.expect(TokenType.SEMI, "Expected ';' in wave header");
+        const test = this.check(TokenType.SEMI) ? undefined : this.expression();
+        this.expect(TokenType.SEMI, "Expected ';' in wave header");
+        const update = this.check(TokenType.RPAREN) ? undefined : this.expression();
+        this.expect(TokenType.RPAREN, "Expected ')' after wave header");
+        const body = this.block();
+        return { kind: "WaveStmt", init, test, update, body, line: startTok.line };
+    }
+    scoreStmt() {
+        const startTok = this.advance(); // score
+        let argument;
+        if (!this.check(TokenType.SEMI) && !this.check(TokenType.RBRACE)) {
+            argument = this.expression();
+        }
+        this.maybeSemi();
+        return { kind: "ScoreStmt", argument, line: startTok.line };
+    }
+    shoutStmt() {
+        const startTok = this.advance(); // shout
+        this.expect(TokenType.LPAREN, "Expected '(' after shout");
+        const args = [];
+        if (!this.check(TokenType.RPAREN)) {
+            do {
+                args.push(this.expression());
+            } while (this.match(TokenType.COMMA));
+        }
+        this.expect(TokenType.RPAREN, "Expected ')' after shout arguments");
+        this.maybeSemi();
+        return { kind: "ShoutStmt", args, line: startTok.line };
+    }
+    lootStmt() {
+        const startTok = this.advance(); // loot
+        const bindings = [];
+        if (this.match(TokenType.LBRACE)) {
+            if (!this.check(TokenType.RBRACE)) {
+                do {
+                    bindings.push(this.expect(TokenType.IDENT, "Expected binding name").value);
+                } while (this.match(TokenType.COMMA));
+            }
+            this.expect(TokenType.RBRACE, "Expected '}' after loot bindings");
+            // `from "module"` — reuse IDENT check loosely via string
+        }
+        const source = this.expect(TokenType.STRING, "Expected module string after loot").value;
+        this.maybeSemi();
+        return { kind: "LootStmt", source, bindings, line: startTok.line };
+    }
+    exprStmt() {
+        const line = this.peek().line;
+        const expression = this.expression();
+        this.maybeSemi();
+        return { kind: "ExprStmt", expression, line };
+    }
+    // ---- expressions (precedence climbing) ----
+    expression() {
+        return this.assignment();
+    }
+    assignment() {
+        const expr = this.logicalOr();
+        if (this.match(TokenType.ASSIGN)) {
+            const eqTok = this.tokens[this.pos - 1];
+            const value = this.assignment();
+            if (expr.kind === "Identifier") {
+                return { kind: "AssignExpr", name: expr.name, value, line: eqTok.line };
+            }
+            throw new ParseError("Invalid assignment target", eqTok.line, eqTok.col);
+        }
+        return expr;
+    }
+    logicalOr() {
+        let expr = this.logicalAnd();
+        while (this.check(TokenType.OR)) {
+            const opTok = this.advance();
+            const right = this.logicalAnd();
+            expr = { kind: "LogicalExpr", operator: "||", left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    logicalAnd() {
+        let expr = this.equality();
+        while (this.check(TokenType.AND)) {
+            const opTok = this.advance();
+            const right = this.equality();
+            expr = { kind: "LogicalExpr", operator: "&&", left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    equality() {
+        let expr = this.comparison();
+        while (this.check(TokenType.EQ) || this.check(TokenType.NEQ)) {
+            const opTok = this.advance();
+            const right = this.comparison();
+            expr = { kind: "BinaryExpr", operator: opTok.value, left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    comparison() {
+        let expr = this.additive();
+        while (this.check(TokenType.LT) ||
+            this.check(TokenType.LTE) ||
+            this.check(TokenType.GT) ||
+            this.check(TokenType.GTE)) {
+            const opTok = this.advance();
+            const right = this.additive();
+            expr = { kind: "BinaryExpr", operator: opTok.value, left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    additive() {
+        let expr = this.multiplicative();
+        while (this.check(TokenType.PLUS) || this.check(TokenType.MINUS)) {
+            const opTok = this.advance();
+            const right = this.multiplicative();
+            expr = { kind: "BinaryExpr", operator: opTok.value, left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    multiplicative() {
+        let expr = this.unary();
+        while (this.check(TokenType.STAR) || this.check(TokenType.SLASH) || this.check(TokenType.PERCENT)) {
+            const opTok = this.advance();
+            const right = this.unary();
+            expr = { kind: "BinaryExpr", operator: opTok.value, left: expr, right, line: opTok.line };
+        }
+        return expr;
+    }
+    unary() {
+        if (this.check(TokenType.NOT) || this.check(TokenType.MINUS)) {
+            const opTok = this.advance();
+            const argument = this.unary();
+            return { kind: "UnaryExpr", operator: opTok.value, argument, line: opTok.line };
+        }
+        return this.callOrIndex();
+    }
+    callOrIndex() {
+        let expr = this.primary();
+        while (true) {
+            if (this.check(TokenType.LPAREN)) {
+                const opTok = this.advance();
+                const args = [];
+                if (!this.check(TokenType.RPAREN)) {
+                    do {
+                        args.push(this.expression());
+                    } while (this.match(TokenType.COMMA));
+                }
+                this.expect(TokenType.RPAREN, "Expected ')' after arguments");
+                expr = { kind: "CallExpr", callee: expr, args, line: opTok.line };
+            }
+            else if (this.check(TokenType.LBRACKET)) {
+                const opTok = this.advance();
+                const index = this.expression();
+                this.expect(TokenType.RBRACKET, "Expected ']' after index");
+                expr = { kind: "IndexExpr", object: expr, index, line: opTok.line };
+            }
+            else {
+                break;
+            }
+        }
+        return expr;
+    }
+    primary() {
+        const t = this.peek();
+        if (this.match(TokenType.HIT)) {
+            // `hit` as a prefix is sugar: `hit foo(...)` === `foo(...)`.
+            return this.callOrIndex();
+        }
+        if (this.match(TokenType.NUMBER)) {
+            return { kind: "NumberLit", value: parseFloat(t.value) };
+        }
+        if (this.match(TokenType.STRING)) {
+            return { kind: "StringLit", value: t.value };
+        }
+        if (this.match(TokenType.ALIVE)) {
+            return { kind: "BoolLit", value: true };
+        }
+        if (this.match(TokenType.DEAD)) {
+            return { kind: "BoolLit", value: false };
+        }
+        if (this.match(TokenType.VOID)) {
+            return { kind: "VoidLit" };
+        }
+        if (this.match(TokenType.IDENT)) {
+            return { kind: "Identifier", name: t.value, line: t.line };
+        }
+        if (this.match(TokenType.LBRACKET)) {
+            const elements = [];
+            if (!this.check(TokenType.RBRACKET)) {
+                do {
+                    elements.push(this.expression());
+                } while (this.match(TokenType.COMMA));
+            }
+            this.expect(TokenType.RBRACKET, "Expected ']' after array literal");
+            return { kind: "ArrayLit", elements };
+        }
+        if (this.match(TokenType.LPAREN)) {
+            const expr = this.expression();
+            this.expect(TokenType.RPAREN, "Expected ')' after expression");
+            return expr;
+        }
+        throw new ParseError(`Unexpected token '${t.value || t.type}'`, t.line, t.col);
+    }
+}
+function parse(tokens) {
+    return new Parser(tokens).parse();
+}
+
+
+// ---- typechecker.js ----
+// BlastScript uses gradual typing: annotations are optional. When present,
+// they're checked; when absent, the checker infers what it can and otherwise
+// treats the value as `any` and stays out of the way.
+class TypeError_ extends Error {
+    constructor(message, line) {
+        super(line ? `${message} (line ${line})` : message);
+        this.line = line;
+        this.name = "TypeError";
+    }
+}
+class Scope {
+    constructor(parent) {
+        this.parent = parent;
+        this.vars = new Map();
+    }
+    get(name) {
+        return this.vars.get(name) ?? this.parent?.get(name);
+    }
+    set(name, t) {
+        this.vars.set(name, t);
+    }
+}
+function schemeToLabel(s) {
+    if (typeof s === "string")
+        return s;
+    return `fn(${s.params.join(", ")}) => ${s.ret}`;
+}
+function literalType(n) {
+    switch (n.kind) {
+        case "NumberLit":
+            return "num";
+        case "StringLit":
+            return "str";
+        case "BoolLit":
+            return "bool";
+        case "ArrayLit":
+            return "arr";
+        case "VoidLit":
+            return "void";
+        default:
+            return undefined;
+    }
+}
+class TypeChecker {
+    constructor() {
+        this.errors = [];
+    }
+    check(program) {
+        const global = new Scope();
+        this.hoistWeapons(program.body, global);
+        for (const stmt of program.body)
+            this.checkStmt(stmt, global);
+        return this.errors;
+    }
+    hoistWeapons(body, scope) {
+        for (const stmt of body) {
+            if (stmt.kind === "WeaponDecl") {
+                scope.set(stmt.name, {
+                    kind: "fn",
+                    params: stmt.params.map((p) => p.typeAnnotation ?? "any"),
+                    ret: stmt.returnType ?? "any",
+                });
+            }
+        }
+    }
+    inferExpr(node, scope) {
+        const lit = literalType(node);
+        if (lit)
+            return lit;
+        switch (node.kind) {
+            case "Identifier": {
+                const t = scope.get(node.name);
+                if (t === undefined)
+                    return "any"; // unknown binding — don't block execution
+                return typeof t === "string" ? t : "fn";
+            }
+            case "AssignExpr": {
+                const declared = scope.get(node.name);
+                const valueType = this.inferExpr(node.value, scope);
+                if (declared && typeof declared === "string" && declared !== "any" && valueType !== "any" && declared !== valueType) {
+                    this.errors.push(new TypeError_(`Cannot assign '${valueType}' to '${node.name}' of type '${declared}'`, node.line));
+                }
+                return valueType;
+            }
+            case "BinaryExpr": {
+                const l = this.inferExpr(node.left, scope);
+                const r = this.inferExpr(node.right, scope);
+                if (["==", "!=", "<", "<=", ">", ">="].includes(node.operator))
+                    return "bool";
+                if (node.operator === "+" && (l === "str" || r === "str"))
+                    return "str";
+                if (l !== "any" && r !== "any" && l !== r) {
+                    this.errors.push(new TypeError_(`Operator '${node.operator}' type mismatch: '${l}' vs '${r}'`, node.line));
+                }
+                return l === "any" ? r : l;
+            }
+            case "LogicalExpr":
+                this.inferExpr(node.left, scope);
+                this.inferExpr(node.right, scope);
+                return "bool";
+            case "UnaryExpr": {
+                const t = this.inferExpr(node.argument, scope);
+                if (node.operator === "!")
+                    return "bool";
+                return t;
+            }
+            case "CallExpr": {
+                if (node.callee.kind === "Identifier") {
+                    const sig = scope.get(node.callee.name);
+                    if (sig && typeof sig !== "string") {
+                        if (sig.params.length !== node.args.length) {
+                            this.errors.push(new TypeError_(`'${node.callee.name}' expects ${sig.params.length} argument(s), got ${node.args.length}`, node.line));
+                        }
+                        else {
+                            node.args.forEach((arg, idx) => {
+                                const argT = this.inferExpr(arg, scope);
+                                const paramT = sig.params[idx];
+                                if (paramT !== "any" && argT !== "any" && argT !== paramT) {
+                                    this.errors.push(new TypeError_(`Argument ${idx + 1} to '${node.callee.kind === "Identifier" ? node.callee.name : "?"}' should be '${paramT}', got '${argT}'`, node.line));
+                                }
+                            });
+                        }
+                        return sig.ret;
+                    }
+                }
+                else {
+                    this.inferExpr(node.callee, scope);
+                    node.args.forEach((a) => this.inferExpr(a, scope));
+                }
+                return "any";
+            }
+            case "IndexExpr":
+                this.inferExpr(node.object, scope);
+                this.inferExpr(node.index, scope);
+                return "any";
+            default:
+                return "any";
+        }
+    }
+    checkStmt(node, scope) {
+        switch (node.kind) {
+            case "VarDecl": {
+                const inferred = this.inferExpr(node.init, scope);
+                if (node.typeAnnotation && node.typeAnnotation !== "any" && inferred !== "any" && inferred !== node.typeAnnotation) {
+                    this.errors.push(new TypeError_(`'${node.name}' is declared as '${node.typeAnnotation}' but initialized with '${inferred}'`, node.line));
+                }
+                scope.set(node.name, node.typeAnnotation ?? inferred);
+                break;
+            }
+            case "WeaponDecl": {
+                const inner = new Scope(scope);
+                for (const p of node.params)
+                    inner.set(p.name, p.typeAnnotation ?? "any");
+                inner.set(node.name, {
+                    kind: "fn",
+                    params: node.params.map((p) => p.typeAnnotation ?? "any"),
+                    ret: node.returnType ?? "any",
+                }); // allow recursion
+                this.hoistWeapons(node.body.body, inner);
+                for (const s of node.body.body)
+                    this.checkStmt(s, inner);
+                break;
+            }
+            case "AimStmt": {
+                this.inferExpr(node.test, scope);
+                this.checkStmt(node.consequent, new Scope(scope));
+                if (node.alternate)
+                    this.checkStmt(node.alternate, new Scope(scope));
+                break;
+            }
+            case "RespawnStmt": {
+                this.inferExpr(node.test, scope);
+                this.checkStmt(node.body, new Scope(scope));
+                break;
+            }
+            case "WaveStmt": {
+                const inner = new Scope(scope);
+                if (node.init)
+                    this.checkStmt(node.init, inner);
+                if (node.test)
+                    this.inferExpr(node.test, inner);
+                if (node.update)
+                    this.inferExpr(node.update, inner);
+                this.checkStmt(node.body, inner);
+                break;
+            }
+            case "Block": {
+                const inner = new Scope(scope);
+                for (const s of node.body)
+                    this.checkStmt(s, inner);
+                break;
+            }
+            case "ScoreStmt":
+                if (node.argument)
+                    this.inferExpr(node.argument, scope);
+                break;
+            case "ShoutStmt":
+                for (const a of node.args)
+                    this.inferExpr(a, scope);
+                break;
+            case "ExprStmt":
+                this.inferExpr(node.expression, scope);
+                break;
+            default:
+                break;
+        }
+    }
+}
+function typecheck(program) {
+    return new TypeChecker().check(program);
+}
+
+
+// ---- interpreter.js ----
+class RuntimeError extends Error {
+    constructor(message, line) {
+        super(line ? `${message} (line ${line})` : message);
+        this.line = line;
+        this.name = "RuntimeError";
+    }
+}
+function isFunction(v) {
+    return typeof v === "object" && v !== null && !Array.isArray(v) && v.__blast_fn === true;
+}
+// Sentinel classes used to unwind the JS call stack for control flow.
+class ScoreSignal {
+    constructor(value) {
+        this.value = value;
+    }
+}
+class FleeSignal {
+}
+class ReloadSignal {
+}
+class Environment {
+    constructor(parent) {
+        this.parent = parent;
+        this.vars = new Map();
+    }
+    declare(name, value, constant) {
+        this.vars.set(name, { value, constant });
+    }
+    assign(name, value, line) {
+        let env = this;
+        while (env) {
+            if (env.vars.has(name)) {
+                const slot = env.vars.get(name);
+                if (slot.constant)
+                    throw new RuntimeError(`Cannot reassign loadout '${name}'`, line);
+                slot.value = value;
+                return;
+            }
+            env = env.parent;
+        }
+        throw new RuntimeError(`Undefined variable '${name}'`, line);
+    }
+    get(name, line) {
+        let env = this;
+        while (env) {
+            if (env.vars.has(name))
+                return env.vars.get(name).value;
+            env = env.parent;
+        }
+        throw new RuntimeError(`Undefined variable '${name}'`, line);
+    }
+}
+function stringify(v) {
+    if (v === null)
+        return "void";
+    if (Array.isArray(v))
+        return `[${v.map(stringify).join(", ")}]`;
+    if (isFunction(v))
+        return `<weapon ${v.name}>`;
+    if (typeof v === "function")
+        return `<native fn>`;
+    return String(v);
+}
+class Interpreter {
+    constructor(options = {}) {
+        this.options = options;
+        this.steps = 0;
+        this.maxSteps = options.maxSteps ?? 500000;
+    }
+    run(program) {
+        const global = new Environment();
+        this.installGlobals(global);
+        let last = null;
+        for (const stmt of program.body) {
+            last = this.execStmt(stmt, global);
+        }
+        return last;
+    }
+    installGlobals(env) {
+        env.declare("len", ((...args) => {
+            const v = args[0];
+            if (typeof v === "string" || Array.isArray(v))
+                return v.length;
+            throw new RuntimeError("len() expects a string or array");
+        }), true);
+        env.declare("range", ((...args) => {
+            const n = args[0];
+            return Array.from({ length: n }, (_, i) => i);
+        }), true);
+        env.declare("push", ((...args) => {
+            const [arr, val] = args;
+            if (!Array.isArray(arr))
+                throw new RuntimeError("push() expects an array");
+            arr.push(val);
+            return arr;
+        }), true);
+    }
+    tick(node) {
+        this.steps++;
+        if (this.steps > this.maxSteps) {
+            throw new RuntimeError("Execution aborted: too many steps (possible infinite respawn/wave loop)");
+        }
+        this.options.onStep?.(node);
+    }
+    execBlock(block, env) {
+        let last = null;
+        for (const stmt of block.body) {
+            last = this.execStmt(stmt, env);
+        }
+        return last;
+    }
+    execStmt(node, env) {
+        this.tick(node);
+        switch (node.kind) {
+            case "VarDecl": {
+                const value = this.evalExpr(node.init, env);
+                env.declare(node.name, value, node.constant);
+                return null;
+            }
+            case "WeaponDecl": {
+                const fn = {
+                    __blast_fn: true,
+                    name: node.name,
+                    params: node.params,
+                    body: node.body,
+                    closure: env,
+                };
+                env.declare(node.name, fn, true);
+                return null;
+            }
+            case "AimStmt": {
+                if (this.truthy(this.evalExpr(node.test, env))) {
+                    return this.execBlock(node.consequent, new Environment(env));
+                }
+                else if (node.alternate) {
+                    if (node.alternate.kind === "AimStmt")
+                        return this.execStmt(node.alternate, env);
+                    return this.execBlock(node.alternate, new Environment(env));
+                }
+                return null;
+            }
+            case "RespawnStmt": {
+                while (this.truthy(this.evalExpr(node.test, env))) {
+                    try {
+                        this.execBlock(node.body, new Environment(env));
+                    }
+                    catch (e) {
+                        if (e instanceof FleeSignal)
+                            break;
+                        if (e instanceof ReloadSignal)
+                            continue;
+                        throw e;
+                    }
+                }
+                return null;
+            }
+            case "WaveStmt": {
+                const loopEnv = new Environment(env);
+                if (node.init)
+                    this.execStmt(node.init, loopEnv);
+                while (node.test === undefined || this.truthy(this.evalExpr(node.test, loopEnv))) {
+                    try {
+                        this.execBlock(node.body, new Environment(loopEnv));
+                    }
+                    catch (e) {
+                        if (e instanceof FleeSignal)
+                            break;
+                        if (e instanceof ReloadSignal) {
+                            if (node.update)
+                                this.evalExpr(node.update, loopEnv);
+                            continue;
+                        }
+                        throw e;
+                    }
+                    if (node.update)
+                        this.evalExpr(node.update, loopEnv);
+                }
+                return null;
+            }
+            case "ScoreStmt":
+                throw new ScoreSignal(node.argument ? this.evalExpr(node.argument, env) : null);
+            case "FleeStmt":
+                throw new FleeSignal();
+            case "ReloadStmt":
+                throw new ReloadSignal();
+            case "ShoutStmt": {
+                const values = node.args.map((a) => this.evalExpr(a, env));
+                this.options.onShout?.(values);
+                return null;
+            }
+            case "LootStmt":
+                // The playground/host environment is responsible for resolving modules;
+                // the core interpreter treats `loot` as a no-op hook point.
+                return null;
+            case "Block":
+                return this.execBlock(node, new Environment(env));
+            case "ExprStmt":
+                return this.evalExpr(node.expression, env);
+            default:
+                return this.evalExpr(node, env);
+        }
+    }
+    truthy(v) {
+        if (v === null)
+            return false;
+        if (typeof v === "number")
+            return v !== 0;
+        if (typeof v === "string")
+            return v.length > 0;
+        if (Array.isArray(v))
+            return v.length > 0;
+        return Boolean(v);
+    }
+    evalExpr(node, env) {
+        switch (node.kind) {
+            case "NumberLit":
+                return node.value;
+            case "StringLit":
+                return node.value;
+            case "BoolLit":
+                return node.value;
+            case "VoidLit":
+                return null;
+            case "ArrayLit":
+                return node.elements.map((e) => this.evalExpr(e, env));
+            case "Identifier":
+                return env.get(node.name, node.line);
+            case "AssignExpr": {
+                const value = this.evalExpr(node.value, env);
+                env.assign(node.name, value, node.line);
+                return value;
+            }
+            case "LogicalExpr": {
+                const l = this.evalExpr(node.left, env);
+                if (node.operator === "&&")
+                    return this.truthy(l) ? this.evalExpr(node.right, env) : l;
+                return this.truthy(l) ? l : this.evalExpr(node.right, env);
+            }
+            case "UnaryExpr": {
+                const v = this.evalExpr(node.argument, env);
+                if (node.operator === "-")
+                    return -v;
+                if (node.operator === "!")
+                    return !this.truthy(v);
+                throw new RuntimeError(`Unknown unary operator '${node.operator}'`, node.line);
+            }
+            case "BinaryExpr":
+                return this.evalBinary(node, env);
+            case "IndexExpr": {
+                const obj = this.evalExpr(node.object, env);
+                const idx = this.evalExpr(node.index, env);
+                if (Array.isArray(obj) && typeof idx === "number")
+                    return obj[idx] ?? null;
+                if (typeof obj === "string" && typeof idx === "number")
+                    return obj[idx] ?? null;
+                throw new RuntimeError("Invalid index access", node.line);
+            }
+            case "CallExpr":
+                return this.evalCall(node, env);
+            default:
+                throw new RuntimeError(`Cannot evaluate node of kind '${node.kind}'`);
+        }
+    }
+    evalBinary(node, env) {
+        const l = this.evalExpr(node.left, env);
+        const r = this.evalExpr(node.right, env);
+        switch (node.operator) {
+            case "+":
+                if (typeof l === "string" || typeof r === "string")
+                    return stringify(l) + stringify(r);
+                return l + r;
+            case "-":
+                return l - r;
+            case "*":
+                return l * r;
+            case "/":
+                return l / r;
+            case "%":
+                return l % r;
+            case "==":
+                return l === r;
+            case "!=":
+                return l !== r;
+            case "<":
+                return l < r;
+            case "<=":
+                return l <= r;
+            case ">":
+                return l > r;
+            case ">=":
+                return l >= r;
+            default:
+                throw new RuntimeError(`Unknown operator '${node.operator}'`, node.line);
+        }
+    }
+    evalCall(node, env) {
+        const callee = this.evalExpr(node.callee, env);
+        const args = node.args.map((a) => this.evalExpr(a, env));
+        if (typeof callee === "function") {
+            return callee(...args);
+        }
+        if (isFunction(callee)) {
+            const callEnv = new Environment(callee.closure);
+            callee.params.forEach((p, idx) => callEnv.declare(p.name, args[idx] ?? null, false));
+            try {
+                this.execBlock(callee.body, callEnv);
+            }
+            catch (e) {
+                if (e instanceof ScoreSignal)
+                    return e.value;
+                throw e;
+            }
+            return null;
+        }
+        throw new RuntimeError("Attempted to call a non-weapon value", node.line);
+    }
+}
+function interpret(program, options) {
+    return new Interpreter(options).run(program);
+}
+
+
+// ---- compiler.js ----
+// Compiles a BlastScript AST directly to readable JavaScript source.
+// This is a straightforward structural translation, not an optimizing
+// compiler — the goal is output a human can read and paste anywhere.
+class Compiler {
+    constructor() {
+        this.indentLevel = 0;
+    }
+    compile(program) {
+        const runtime = [
+            "function __blast_shout(...args) { console.log(...args); }",
+        ].join("\n");
+        const body = program.body.map((s) => this.stmt(s)).join("\n");
+        return `${runtime}\n\n${body}\n`;
+    }
+    indent() {
+        return "  ".repeat(this.indentLevel);
+    }
+    withIndent(fn) {
+        this.indentLevel++;
+        const out = fn();
+        this.indentLevel--;
+        return out;
+    }
+    stmt(node) {
+        const pad = this.indent();
+        switch (node.kind) {
+            case "VarDecl":
+                return `${pad}${node.constant ? "const" : "let"} ${node.name} = ${this.expr(node.init)};`;
+            case "WeaponDecl": {
+                const params = node.params.map((p) => p.name).join(", ");
+                const body = this.withIndent(() => node.body.body.map((s) => this.stmt(s)).join("\n"));
+                return `${pad}function ${node.name}(${params}) {\n${body}\n${pad}}`;
+            }
+            case "AimStmt": {
+                const cons = this.withIndent(() => node.consequent.body.map((s) => this.stmt(s)).join("\n"));
+                let out = `${pad}if (${this.expr(node.test)}) {\n${cons}\n${pad}}`;
+                if (node.alternate) {
+                    if (node.alternate.kind === "AimStmt") {
+                        out += ` else ${this.stmt(node.alternate).trimStart()}`;
+                    }
+                    else {
+                        const alt = this.withIndent(() => node.alternate.body.map((s) => this.stmt(s)).join("\n"));
+                        out += ` else {\n${alt}\n${pad}}`;
+                    }
+                }
+                return out;
+            }
+            case "RespawnStmt": {
+                const body = this.withIndent(() => node.body.body.map((s) => this.stmt(s)).join("\n"));
+                return `${pad}while (${this.expr(node.test)}) {\n${body}\n${pad}}`;
+            }
+            case "WaveStmt": {
+                const init = node.init ? this.stmt(node.init).trim().replace(/;$/, "") : "";
+                const test = node.test ? this.expr(node.test) : "";
+                const update = node.update ? this.expr(node.update) : "";
+                const body = this.withIndent(() => node.body.body.map((s) => this.stmt(s)).join("\n"));
+                return `${pad}for (${init}; ${test}; ${update}) {\n${body}\n${pad}}`;
+            }
+            case "ScoreStmt":
+                return `${pad}return${node.argument ? " " + this.expr(node.argument) : ""};`;
+            case "FleeStmt":
+                return `${pad}break;`;
+            case "ReloadStmt":
+                return `${pad}continue;`;
+            case "ShoutStmt":
+                return `${pad}__blast_shout(${node.args.map((a) => this.expr(a)).join(", ")});`;
+            case "LootStmt": {
+                const bindings = node.bindings.length ? `{ ${node.bindings.join(", ")} }` : "__blast_mod";
+                return `${pad}import ${bindings} from ${JSON.stringify(node.source)};`;
+            }
+            case "Block": {
+                const inner = this.withIndent(() => node.body.map((s) => this.stmt(s)).join("\n"));
+                return `${pad}{\n${inner}\n${pad}}`;
+            }
+            case "ExprStmt":
+                return `${pad}${this.expr(node.expression)};`;
+            default:
+                return `${pad}${this.expr(node)};`;
+        }
+    }
+    expr(node) {
+        switch (node.kind) {
+            case "NumberLit":
+                return String(node.value);
+            case "StringLit":
+                return JSON.stringify(node.value);
+            case "BoolLit":
+                return String(node.value);
+            case "VoidLit":
+                return "null";
+            case "ArrayLit":
+                return `[${node.elements.map((e) => this.expr(e)).join(", ")}]`;
+            case "Identifier":
+                return node.name;
+            case "AssignExpr":
+                return `(${node.name} = ${this.expr(node.value)})`;
+            case "LogicalExpr":
+                return `(${this.expr(node.left)} ${node.operator} ${this.expr(node.right)})`;
+            case "UnaryExpr":
+                return `(${node.operator}${this.expr(node.argument)})`;
+            case "BinaryExpr":
+                return `(${this.expr(node.left)} ${node.operator} ${this.expr(node.right)})`;
+            case "IndexExpr":
+                return `${this.expr(node.object)}[${this.expr(node.index)}]`;
+            case "CallExpr":
+                return `${this.expr(node.callee)}(${node.args.map((a) => this.expr(a)).join(", ")})`;
+            default:
+                throw new Error(`Cannot compile node of kind '${node.kind}'`);
+        }
+    }
+}
+function compileToJS(program) {
+    return new Compiler().compile(program);
+}
+
+
+// ---- run() convenience (from index.js) ----
+function run(source, options) {
+  const tokens = tokenize(source);
+  const program = parse(tokens);
+  const typeErrors = typecheck(program);
+  const value = interpret(program, options);
+  return { value, typeErrors };
+}
+
+window.BlastScriptCore = {
+  run, tokenize, parse, typecheck, interpret, compileToJS,
+  LexError, ParseError, TypeError_, RuntimeError,
+  TokenType, KEYWORDS,
+};
+})();
+</script>
+
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 </head>
 <body>
@@ -934,6 +2232,211 @@ function SnakeGame() {
           <span />
         </div>
         <p className="ap-snake-hint">Arrow keys or WASD. This browser build is a quick homage — the real thing is native Flutter.</p>
+      </div>
+    </div>
+  );
+}
+
+/* Same starter snippets as the real playground
+   (packages/playground/lib/examples.ts) — kept in sync by hand. */
+const BLAST_EXAMPLES = [
+  {
+    id: "hello-arena",
+    label: "hello-arena",
+    source: `// hello-arena.blast — the canonical BlastScript starter.
+
+loadout MAX_WAVES = 3
+spawn points = 0
+spawn player = "Neo"
+
+weapon spawnEnemy(waveNum: num) => str {
+  score "grunt-" + waveNum
+}
+
+shout("Player online:", player)
+
+wave (spawn w = 1; w <= MAX_WAVES; w = w + 1) {
+  spawn enemy = spawnEnemy(w)
+  shout("Wave", w, "spawns", enemy)
+  points = points + (w * 10)
+}
+
+aim (points >= 50) {
+  shout("Rank: LEGENDARY —", points, "points")
+} else {
+  shout("Rank: RECRUIT —", points, "points")
+}
+`,
+  },
+  {
+    id: "closures",
+    label: "closures",
+    source: `// A weapon that returns a weapon: classic closure over 'ammo'.
+weapon makeCounter(start: num) {
+  spawn ammo = start
+
+  weapon fire() {
+    ammo = ammo + 1
+    score ammo
+  }
+
+  score fire
+}
+
+spawn counter = makeCounter(0)
+shout(counter())   // 1
+shout(counter())   // 2
+shout(counter())   // 3
+
+weapon factorial(n: num) => num {
+  aim (n <= 1) {
+    score 1
+  }
+  score n * factorial(n - 1)
+}
+
+shout("5! =", factorial(5))
+`,
+  },
+  {
+    id: "loop-control",
+    label: "flee & reload",
+    source: `// flee = break, reload = continue.
+spawn i = 0
+respawn (i < 10) {
+  i = i + 1
+  aim (i % 2 == 0) {
+    reload
+  }
+  aim (i == 9) {
+    shout("boss spotted, bailing")
+    flee
+  }
+  shout("clearing wave", i)
+}
+`,
+  },
+  {
+    id: "types",
+    label: "type errors",
+    source: `// Gradual typing: annotate what you want checked, leave the
+// rest as 'any'. This one is intentionally wrong — run it and
+// look at the diagnostics panel below the output.
+
+spawn hp: num = "not a number"
+
+weapon heal(amount: num) => num {
+  score amount * 2
+}
+
+shout(heal("also wrong"))
+`,
+  },
+];
+
+/* Live BlastScript console — lexes, parses, type-checks and interprets
+   real BlastScript source entirely client-side, using the same
+   @blastscript/core the Next.js playground runs, compiled to a single
+   browser bundle (see window.BlastScriptCore, injected in <head>). */
+function BlastConsole() {
+  const [exampleId, setExampleId] = useState(BLAST_EXAMPLES[0].id);
+  const [code, setCode] = useState(BLAST_EXAMPLES[0].source);
+  const [lines, setLines] = useState([]);
+  const [typeErrors, setTypeErrors] = useState([]);
+  const [status, setStatus] = useState("idle"); // idle | ok | error
+  const [ranOnce, setRanOnce] = useState(false);
+
+  const loadExample = (ex) => {
+    setExampleId(ex.id);
+    setCode(ex.source);
+    setLines([]);
+    setTypeErrors([]);
+    setStatus("idle");
+  };
+
+  const runCode = () => {
+    const core = window.BlastScriptCore;
+    setRanOnce(true);
+    if (!core) {
+      setLines([{ kind: "error", text: "BlastScript core failed to load — check your connection and reload." }]);
+      setTypeErrors([]);
+      setStatus("error");
+      return;
+    }
+    const out = [];
+    try {
+      const result = core.run(code, {
+        onShout: (values) => out.push({ kind: "shout", text: values.map(String).join(" ") }),
+        maxSteps: 150000,
+      });
+      setLines(out.length ? out : [{ kind: "muted", text: "(no shout() output — program ran fine, nothing was printed)" }]);
+      setTypeErrors((result.typeErrors || []).map((e) => e.message));
+      setStatus("ok");
+    } catch (err) {
+      setLines(out);
+      setTypeErrors([]);
+      setStatus("error");
+      setLines((prev) => [...prev, { kind: "error", text: `${err.name || "Error"}: ${err.message || String(err)}` }]);
+    }
+  };
+
+  return (
+    <div className="ap-blast-wrap">
+      <div className="ap-blast-examples">
+        {BLAST_EXAMPLES.map((ex) => (
+          <button
+            key={ex.id}
+            className={`ap-blast-example-btn ${exampleId === ex.id ? "is-active" : ""}`}
+            onClick={() => loadExample(ex)}
+          >
+            {ex.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="ap-blast-panes">
+        <div className="ap-blast-pane">
+          <div className="ap-blast-pane-label"><Code2 size={12} /> source.blast</div>
+          <textarea
+            className="ap-blast-editor"
+            spellCheck={false}
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setExampleId(null); }}
+          />
+        </div>
+        <div className="ap-blast-pane">
+          <div className="ap-blast-pane-label">
+            <Terminal size={12} /> output
+            {status !== "idle" && (
+              <span className={`ap-blast-status ${status}`}>
+                {status === "ok" ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                {status === "ok" ? "ran" : "error"}
+              </span>
+            )}
+          </div>
+          <div className="ap-blast-output">
+            {!ranOnce && <div className="ap-blast-line muted">Press Run to execute this program in your browser.</div>}
+            {lines.map((l, i) => (
+              <div className={`ap-blast-line ${l.kind}`} key={i}>
+                {l.kind === "shout" ? <span className="ap-blast-prompt">&gt;</span> : null}
+                {l.text}
+              </div>
+            ))}
+            {typeErrors.length > 0 && (
+              <div className="ap-blast-diagnostics">
+                <div className="ap-blast-diagnostics-title"><AlertTriangle size={12} /> Type checker diagnostics</div>
+                {typeErrors.map((t, i) => (
+                  <div className="ap-blast-line warn" key={i}>{t}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="ap-blast-actions">
+        <button className="ap-blast-run" onClick={runCode}><Play size={14} /> Run</button>
+        <span className="ap-blast-hint">Runs fully client-side — nothing is sent to a server. Full language + Next.js playground on GitHub.</span>
       </div>
     </div>
   );
@@ -2434,6 +3937,56 @@ function Portfolio() {
         .ap-snake-pad button:hover { border-color: var(--circuit); color: var(--circuit); }
         .ap-snake-hint { font-size: 12px; color: var(--ivory-dim); line-height: 1.6; margin: 4px 0 0; }
 
+        .ap-blast-wrap { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+        .ap-blast-examples { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ap-blast-example-btn {
+          font-family: var(--font-mono); font-size: 11px; padding: 6px 12px; border-radius: 999px;
+          border: 1px solid var(--line); background: rgba(0,0,0,0.2); color: var(--ivory-dim);
+          cursor: pointer; transition: border-color 0.2s ease, color 0.2s ease;
+        }
+        .ap-blast-example-btn:hover { color: var(--ivory); border-color: var(--ivory-dim); }
+        .ap-blast-example-btn.is-active { color: var(--circuit); border-color: var(--circuit); background: rgba(76,231,180,0.08); }
+        .ap-blast-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 720px) { .ap-blast-panes { grid-template-columns: 1fr; } }
+        .ap-blast-pane { display: flex; flex-direction: column; min-width: 0; }
+        .ap-blast-pane-label {
+          display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px;
+          letter-spacing: 0.08em; text-transform: uppercase; color: var(--ivory-dim); margin-bottom: 8px;
+        }
+        .ap-blast-status { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; text-transform: none; letter-spacing: 0; }
+        .ap-blast-status.ok { color: var(--circuit); }
+        .ap-blast-status.error { color: #ff8177; }
+        .ap-blast-editor {
+          width: 100%; height: 260px; resize: vertical; background: #12151c; border: 1px solid var(--line);
+          border-radius: 10px; padding: 14px; color: var(--ivory); font-family: var(--font-mono);
+          font-size: 12.5px; line-height: 1.6; outline: none; tab-size: 2;
+        }
+        .ap-blast-editor:focus { border-color: var(--circuit); }
+        .ap-blast-output {
+          height: 260px; overflow-y: auto; background: #0c0e13; border: 1px solid var(--line);
+          border-radius: 10px; padding: 14px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.75;
+        }
+        .ap-blast-line { color: var(--ivory-dim); white-space: pre-wrap; word-break: break-word; }
+        .ap-blast-line.shout { color: var(--ivory); }
+        .ap-blast-line.error { color: #ff8177; }
+        .ap-blast-line.warn { color: var(--amber); }
+        .ap-blast-line.muted { color: var(--ivory-dim); opacity: 0.7; font-style: italic; }
+        .ap-blast-prompt { color: var(--circuit); margin-right: 8px; }
+        .ap-blast-diagnostics { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+        .ap-blast-diagnostics-title {
+          display: flex; align-items: center; gap: 6px; color: var(--amber); font-size: 11px;
+          letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px;
+        }
+        .ap-blast-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .ap-blast-run {
+          display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 12.5px;
+          font-weight: 600; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--circuit);
+          background: rgba(76,231,180,0.1); color: var(--circuit); cursor: pointer; transition: background 0.2s ease, transform 0.15s ease;
+        }
+        .ap-blast-run:hover { background: rgba(76,231,180,0.18); transform: translateY(-1px); }
+        .ap-blast-run:active { transform: translateY(0); }
+        .ap-blast-hint { font-size: 11.5px; color: var(--ivory-dim); line-height: 1.5; }
+
         @media (prefers-reduced-motion: reduce) {
           .ap-reveal, .ap-hero-inner, .ap-scroll-cue svg, .ap-particle, .ap-key, .ap-note, .ap-glowb-trail { animation: none !important; transition: none !important; }
         }
@@ -2681,6 +4234,30 @@ function Portfolio() {
                 ))}
               </div>
               <SnakeGame />
+            </GlowBorder>
+          </div>
+
+          <div className={`ap-reveal d3 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">New game +</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">BlastScript — A Programming Language</h3>
+                <a className="ap-lock-badge" href="https://github.com/Onyx2006/BlastScript" target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
+              </div>
+              <p className="ap-p">
+                BlastScript is a small, from-scratch programming language with an arcade-shooter vocabulary — <code>spawn</code>, <code>weapon</code>, <code>aim</code>, <code>shout</code> — built entirely in TypeScript: hand-written lexer, recursive-descent parser, a gradual type checker, a tree-walking interpreter and a compiler down to JavaScript.
+              </p>
+              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
+                It supports closures, recursion, optional type annotations and proper control flow. The console below runs the real interpreter, compiled to a single browser bundle from the repo above — nothing here is a simulation.
+              </p>
+              <div className="ap-tech-row">
+                {["TypeScript", "Lexer & Parser", "Gradual Typing", "Interpreter", "JS Compiler", "Next.js Playground"].map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+              <BlastConsole />
             </GlowBorder>
           </div>
         </section>
