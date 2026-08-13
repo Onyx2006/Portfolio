@@ -1352,10 +1352,6 @@ import {
   AlertTriangle, Bot, Gauge, Waves,
 } from "lucide-react";
 
-/* =========================================================================
-   EDIT ME — swap in your real details. Everything else in the file reads
-   from this object, so this is the only place you need to touch.
-   ========================================================================= */
 const PROFILE = {
   name: "Oliver Gamboa Mesa",
   role: "Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist",
@@ -1509,7 +1505,7 @@ const SKILL_GROUPS = [
     title: "Frontend",
     icon: Code2,
     color: "var(--shamrock)",
-    items: ["JavaScript", "React", "Angular", "Flutter", "HTML5 / CSS3"],
+    items: ["JavaScript", "TypeScript", "React", "Angular", "Flutter", "HTML5 / CSS3"],
   },
   {
     id: "systems",
@@ -1536,6 +1532,8 @@ function TechIcon({ name }) {
     case "Docker":
       return <svg {...s}><rect x="3" y="10.5" width="3.4" height="3.4" /><rect x="7" y="10.5" width="3.4" height="3.4" /><rect x="11" y="10.5" width="3.4" height="3.4" /><rect x="7" y="6.5" width="3.4" height="3.4" /><path d="M2 14.5c0 3.6 3.3 5.5 8 5.5 5.2 0 8.3-2.3 9.7-5.8.9.1 2-.3 2.3-1.2-1-.9-2.2-.6-2.7-.3-1-1-2.8-1.2-2.8-1.2s-.7 1.5-3 1.5H3.3c-.7 0-1.3.6-1.3 1.5Z" /></svg>;
     case "Kubernetes":
+      return <svg {...s}><path d="m12 2.5 2.3 1.3.8 2.6 2.7.5 1.5 2.3-.9 2.6.9 2.6-1.5 2.3-2.7.5-.8 2.6L12 21.5l-2.3-1.3-.8-2.6-2.7-.5-1.5-2.3.9-2.6-.9-2.6 1.5-2.3 2.7-.5.8-2.6Z" /><circle cx="12" cy="12" r="2.6" /></svg>;
+    case "TypreScript":
       return <svg {...s}><path d="m12 2.5 2.3 1.3.8 2.6 2.7.5 1.5 2.3-.9 2.6.9 2.6-1.5 2.3-2.7.5-.8 2.6L12 21.5l-2.3-1.3-.8-2.6-2.7-.5-1.5-2.3.9-2.6-.9-2.6 1.5-2.3 2.7-.5.8-2.6Z" /><circle cx="12" cy="12" r="2.6" /></svg>;
     case "PHP":
       return <svg {...s}><ellipse cx="12" cy="12" rx="9.5" ry="5.5" /><path d="M6.7 10v4M6.7 10h1.3a1.3 1.3 0 0 1 0 2.6H6.7" /><path d="M11.3 10v4M11.3 10h1.3a1.3 1.3 0 0 1 0 2.6h-1.3" /><path d="M16 10v4M16 10h1.3a1.3 1.3 0 0 1 0 2.6H16" /></svg>;
