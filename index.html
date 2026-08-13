@@ -80,8 +80,20 @@ const PROFILE = {
    stays "running" for the rest of the session, so later scroll-triggered
    notes actually produce sound instead of failing silently on mobile. */
 let sharedAudioCtx = null;
-function getAudioContext() {
+let audioUnlocked = false;
+
+// By default this NEVER creates the context — it only hands back one that
+// already exists. This matters on mobile: MusicalBackground fires its first
+// (purely decorative) note on mount, before the user has tapped anything.
+// If that early call were allowed to construct the AudioContext, the
+// context would be born outside a real user gesture, and on strict mobile
+// browsers (iOS Safari, in-app webviews) it can then get stuck "suspended"
+// forever — resume() from later, genuine taps stops actually unlocking it.
+// Only unlockAudio() (called from the "Press Start" tap) is allowed to
+// construct it, so its whole lifecycle starts inside a trusted gesture.
+function getAudioContext({ allowCreate = false } = {}) {
   if (!sharedAudioCtx) {
+    if (!allowCreate) return null;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     sharedAudioCtx = new AC();
@@ -89,10 +101,24 @@ function getAudioContext() {
   return sharedAudioCtx;
 }
 async function unlockAudio() {
-  const ctx = getAudioContext();
-  if (ctx && ctx.state === "suspended") {
+  const ctx = getAudioContext({ allowCreate: true });
+  if (!ctx) return null;
+  if (ctx.state === "suspended") {
     try { await ctx.resume(); } catch (e) { /* ignore */ }
   }
+  // Belt-and-braces mobile unlock: resume() alone isn't always enough on
+  // iOS Safari / in-app browsers (Instagram, TikTok, etc). Actually
+  // starting a real (silent) buffer source, synchronously inside this same
+  // tap, is the trick that reliably wakes the whole audio pipeline up on
+  // those stricter engines.
+  try {
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (e) { /* ignore */ }
+  audioUnlocked = ctx.state === "running";
   return ctx;
 }
 
