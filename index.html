@@ -1361,6 +1361,7 @@ const PROFILE = {
   github: "https://github.com/onyx2006",
   linkedin: "https://www.linkedin.com/in/oliver-gamboa-mesa/",
   snakeGithub: "https://github.com/Onyx2006/flutter-snake",
+  algoDashboardGithub: "https://github.com/Onyx2006/ALGO-DASHBOARD",
   photo: "me.jpg",
 };
 
@@ -1533,8 +1534,10 @@ function TechIcon({ name }) {
       return <svg {...s}><rect x="3" y="10.5" width="3.4" height="3.4" /><rect x="7" y="10.5" width="3.4" height="3.4" /><rect x="11" y="10.5" width="3.4" height="3.4" /><rect x="7" y="6.5" width="3.4" height="3.4" /><path d="M2 14.5c0 3.6 3.3 5.5 8 5.5 5.2 0 8.3-2.3 9.7-5.8.9.1 2-.3 2.3-1.2-1-.9-2.2-.6-2.7-.3-1-1-2.8-1.2-2.8-1.2s-.7 1.5-3 1.5H3.3c-.7 0-1.3.6-1.3 1.5Z" /></svg>;
     case "Kubernetes":
       return <svg {...s}><path d="m12 2.5 2.3 1.3.8 2.6 2.7.5 1.5 2.3-.9 2.6.9 2.6-1.5 2.3-2.7.5-.8 2.6L12 21.5l-2.3-1.3-.8-2.6-2.7-.5-1.5-2.3.9-2.6-.9-2.6 1.5-2.3 2.7-.5.8-2.6Z" /><circle cx="12" cy="12" r="2.6" /></svg>;
-    case "TypreScript":
-      return <svg {...s}><path d="m12 2.5 2.3 1.3.8 2.6 2.7.5 1.5 2.3-.9 2.6.9 2.6-1.5 2.3-2.7.5-.8 2.6L12 21.5l-2.3-1.3-.8-2.6-2.7-.5-1.5-2.3.9-2.6-.9-2.6 1.5-2.3 2.7-.5.8-2.6Z" /><circle cx="12" cy="12" r="2.6" /></svg>;
+    case "TypeScript":
+      return <svg {...s}><rect x="3" y="3" width="18" height="18" rx="3.5" /><path d="M6.5 8h5M9 8v9" /><path d="M14.2 15.5c.45.55 1.15.9 1.95.9 1.1 0 1.85-.55 1.85-1.4 0-.9-.7-1.2-1.7-1.55-1-.35-1.7-.65-1.7-1.5 0-.8.75-1.35 1.7-1.35.65 0 1.2.25 1.6.65" /></svg>;
+    case "Next.js":
+      return <svg {...s}><circle cx="12" cy="12" r="9.5" /><path d="M8.3 7.8v8.4M8.3 7.8 15.7 17" /><path d="M15.4 7.8v6" /></svg>;
     case "PHP":
       return <svg {...s}><ellipse cx="12" cy="12" rx="9.5" ry="5.5" /><path d="M6.7 10v4M6.7 10h1.3a1.3 1.3 0 0 1 0 2.6H6.7" /><path d="M11.3 10v4M11.3 10h1.3a1.3 1.3 0 0 1 0 2.6h-1.3" /><path d="M16 10v4M16 10h1.3a1.3 1.3 0 0 1 0 2.6H16" /></svg>;
     case "SQL / MySQL":
@@ -1570,6 +1573,367 @@ function TechIcon({ name }) {
     default:
       return <Sparkles size={13} strokeWidth={1.6} />;
   }
+}
+
+/* ALGO::DASHBOARD LIVE PREVIEWS
+   Real, running miniatures of each algorithm from the project — not static
+   icons. Each "engine" is a small closure: engine(canvas, ctx) sets up its
+   own state and returns { step() } where step() draws one frame and
+   returns true once that run has reached a natural end (solved maze,
+   sorted array, dead snake, stable/extinct board, max zoom). AlgoPreview
+   below drives the loop and, on true, freezes the last frame for 3s before
+   instantiating a fresh engine — so every card is always doing something.
+   Boids and Voronoi never "finish"; they just keep drifting. */
+
+function pathfindingEngine(canvas, ctx) {
+  const COLS = 14, ROWS = 10, CELL = canvas.width / COLS;
+  const grid = [];
+  for (let y = 0; y < ROWS; y++) {
+    const row = [];
+    for (let x = 0; x < COLS; x++) row.push({ x, y, wall: Math.random() < 0.24, visited: false, parent: null, g: Infinity, f: Infinity });
+    grid.push(row);
+  }
+  const start = { x: 0, y: Math.floor(ROWS / 2) };
+  const end = { x: COLS - 1, y: Math.floor(ROWS / 2) };
+  grid[start.y][start.x].wall = false;
+  grid[end.y][end.x].wall = false;
+  grid[start.y][start.x].g = 0;
+  grid[start.y][start.x].f = Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
+  const open = [grid[start.y][start.x]];
+  let path = null, finished = false;
+
+  const neighbors = (n) => {
+    const out = [];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = n.x + dx, ny = n.y + dy;
+      if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !grid[ny][nx].wall) out.push(grid[ny][nx]);
+    }
+    return out;
+  };
+  const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const reconstruct = (n) => { const p = []; let c = n; while (c) { p.push(c); c = c.parent; } return p.reverse(); };
+
+  function draw(current) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      const node = grid[y][x];
+      ctx.fillStyle = node.wall ? "#3a4456" : node.visited ? "#1c3a54" : "#0d131c";
+      ctx.fillRect(x * CELL, y * CELL, CELL - 1, CELL - 1);
+    }
+    if (current) { ctx.fillStyle = "#ffb454"; ctx.fillRect(current.x * CELL, current.y * CELL, CELL - 1, CELL - 1); }
+    if (path) { ctx.fillStyle = "#39ff9c"; for (const n of path) ctx.fillRect(n.x * CELL, n.y * CELL, CELL - 1, CELL - 1); }
+    ctx.fillStyle = "#39ff9c"; ctx.fillRect(start.x * CELL, start.y * CELL, CELL - 2, CELL - 2);
+    ctx.fillStyle = "#ff5c7a"; ctx.fillRect(end.x * CELL, end.y * CELL, CELL - 2, CELL - 2);
+  }
+
+  return {
+    step() {
+      if (finished) return true;
+      let current;
+      for (let i = 0; i < 3 && open.length > 0 && !finished; i++) {
+        let minI = 0;
+        for (let j = 1; j < open.length; j++) if (open[j].f < open[minI].f) minI = j;
+        current = open.splice(minI, 1)[0];
+        if (current.visited) { i--; continue; }
+        current.visited = true;
+        if (current === grid[end.y][end.x]) { path = reconstruct(current); finished = true; break; }
+        for (const nb of neighbors(current)) {
+          if (nb.visited) continue;
+          const tg = current.g + 1;
+          if (tg < nb.g) { nb.g = tg; nb.f = tg + manhattan(nb, end); nb.parent = current; open.push(nb); }
+        }
+      }
+      if (open.length === 0 && !finished) finished = true;
+      draw(finished ? null : current);
+      return finished;
+    },
+  };
+}
+
+function neuroSnakeEngine(canvas, ctx) {
+  const COLS = 18, ROWS = 13, CELL = canvas.width / COLS;
+  let snake = [{ x: 4, y: 6 }, { x: 3, y: 6 }, { x: 2, y: 6 }];
+  let dir = { x: 1, y: 0 }, dead = false, steps = 0, tick = 0;
+
+  const spawnFood = () => {
+    let p;
+    do { p = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+    while (snake.some((s) => s.x === p.x && s.y === p.y));
+    return p;
+  };
+  let food = spawnFood();
+
+  function nextDir() {
+    const key = (x, y) => y * COLS + x;
+    const bodySet = new Set(snake.slice(0, -1).map((s) => key(s.x, s.y)));
+    const parent = new Map();
+    const visited = new Set([key(snake[0].x, snake[0].y)]);
+    const queue = [snake[0]];
+    let found = null;
+    while (queue.length) {
+      const cur = queue.shift();
+      if (cur.x === food.x && cur.y === food.y) { found = cur; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cur.x + dx, ny = cur.y + dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        const k = key(nx, ny);
+        if (visited.has(k) || bodySet.has(k)) continue;
+        visited.add(k); parent.set(k, cur); queue.push({ x: nx, y: ny });
+      }
+    }
+    if (!found) return null;
+    let cur = found;
+    while (parent.get(key(cur.x, cur.y)) && parent.get(key(cur.x, cur.y)) !== snake[0]) cur = parent.get(key(cur.x, cur.y));
+    return { x: cur.x - snake[0].x, y: cur.y - snake[0].y };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ff5c7a";
+    ctx.fillRect(food.x * CELL + 1, food.y * CELL + 1, CELL - 2, CELL - 2);
+    snake.forEach((s, i) => { ctx.fillStyle = i === 0 ? "#39ff9c" : "#4ce7b4"; ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2); });
+  }
+
+  return {
+    step() {
+      tick++;
+      if (tick % 5 !== 0) { draw(); return false; }
+      if (dead) { draw(); return true; }
+      const nd = nextDir();
+      if (nd) dir = nd;
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+      const hitWall = head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS;
+      const hitSelf = snake.some((s) => s.x === head.x && s.y === head.y);
+      if (hitWall || hitSelf || !nd) { dead = true; draw(); return true; }
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) { if (snake.length >= COLS * ROWS - 2) dead = true; else food = spawnFood(); }
+      else snake.pop();
+      steps++;
+      if (steps > 500) dead = true;
+      draw();
+      return false;
+    },
+  };
+}
+
+function boidsEngine(canvas, ctx) {
+  const boids = Array.from({ length: 14 }, () => ({
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5,
+  }));
+  return {
+    step() {
+      for (const b of boids) {
+        let sepX = 0, sepY = 0, aliX = 0, aliY = 0, cohX = 0, cohY = 0, n = 0;
+        for (const o of boids) {
+          if (o === b) continue;
+          const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy);
+          if (d < 20 && d > 0) { sepX -= dx / d; sepY -= dy / d; }
+          if (d < 38) { aliX += o.vx; aliY += o.vy; cohX += o.x; cohY += o.y; n++; }
+        }
+        if (n > 0) {
+          aliX /= n; aliY /= n; cohX = cohX / n - b.x; cohY = cohY / n - b.y;
+          b.vx += sepX * 0.045 + aliX * 0.02 + cohX * 0.0012;
+          b.vy += sepY * 0.045 + aliY * 0.02 + cohY * 0.0012;
+        }
+        const sp = Math.hypot(b.vx, b.vy), maxSp = 1.7;
+        if (sp > maxSp) { b.vx = (b.vx / sp) * maxSp; b.vy = (b.vy / sp) * maxSp; }
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < 0) b.x += canvas.width; if (b.x > canvas.width) b.x -= canvas.width;
+        if (b.y < 0) b.y += canvas.height; if (b.y > canvas.height) b.y -= canvas.height;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#4ce7b4";
+      for (const b of boids) {
+        const ang = Math.atan2(b.vy, b.vx);
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ang);
+        ctx.beginPath(); ctx.moveTo(4.5, 0); ctx.lineTo(-3, 2.6); ctx.lineTo(-3, -2.6); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      return false;
+    },
+  };
+}
+
+function voronoiEngine(canvas, ctx) {
+  const colors = ["#4ce7b4", "#ffb454", "#7ac1ff", "#ff5c7a", "#c792ea", "#39ff9c"];
+  const seeds = Array.from({ length: 6 }, (_, i) => ({
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.55, vy: (Math.random() - 0.5) * 0.55, color: colors[i],
+  }));
+  const RES = 6;
+  return {
+    step() {
+      for (const s of seeds) {
+        s.x += s.vx; s.y += s.vy;
+        if (s.x < 0 || s.x > canvas.width) s.vx *= -1;
+        if (s.y < 0 || s.y > canvas.height) s.vy *= -1;
+      }
+      for (let py = 0; py < canvas.height; py += RES) {
+        for (let px = 0; px < canvas.width; px += RES) {
+          let best = 0, bd = Infinity;
+          for (let i = 0; i < seeds.length; i++) {
+            const dx = px - seeds[i].x, dy = py - seeds[i].y, d = dx * dx + dy * dy;
+            if (d < bd) { bd = d; best = i; }
+          }
+          ctx.fillStyle = seeds[best].color; ctx.globalAlpha = 0.5;
+          ctx.fillRect(px, py, RES, RES);
+        }
+      }
+      ctx.globalAlpha = 1;
+      for (const s of seeds) { ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(s.x, s.y, 2, 0, Math.PI * 2); ctx.fill(); }
+      return false;
+    },
+  };
+}
+
+function conwayEngine(canvas, ctx) {
+  const COLS = 28, ROWS = 20, CELL = canvas.width / COLS;
+  let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => (Math.random() < 0.3 ? 1 : 0)));
+  let gen = 0, tick = 0;
+  const history = [];
+
+  const countNeighbors = (x, y) => {
+    let c = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && grid[ny][nx]) c++;
+    }
+    return c;
+  };
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#4ce7b4";
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (grid[y][x]) ctx.fillRect(x * CELL, y * CELL, CELL - 1, CELL - 1);
+  }
+
+  return {
+    step() {
+      tick++;
+      if (tick % 4 !== 0) { draw(); return false; }
+      const next = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      let alive = 0;
+      for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+        const n = countNeighbors(x, y), a = grid[y][x];
+        next[y][x] = a ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0);
+        if (next[y][x]) alive++;
+      }
+      grid = next; gen++;
+      const sig = grid.map((r) => r.join("")).join("|");
+      history.push(sig); if (history.length > 6) history.shift();
+      draw();
+      const extinct = alive === 0;
+      const stable = history.length >= 4 && history[history.length - 1] === history[history.length - 3];
+      return extinct || stable || gen > 140;
+    },
+  };
+}
+
+function sortingEngine(canvas, ctx) {
+  const N = 22, barW = canvas.width / N;
+  const arr = Array.from({ length: N }, () => 0.08 + Math.random() * 0.88);
+  let i = 0, j = 0, sorted = false;
+
+  function draw(hi1, hi2) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let k = 0; k < N; k++) {
+      const h = arr[k] * canvas.height * 0.92;
+      ctx.fillStyle = k === hi1 || k === hi2 ? "#ffb454" : sorted ? "#39ff9c" : "#4ce7b4";
+      ctx.fillRect(k * barW + 1, canvas.height - h, barW - 2, h);
+    }
+  }
+
+  return {
+    step() {
+      if (sorted) return true;
+      let swaps = 0;
+      while (swaps < 2 && i < N - 1) {
+        if (j < N - 1 - i) {
+          if (arr[j] > arr[j + 1]) { [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]]; swaps++; }
+          j++;
+        } else { j = 0; i++; }
+      }
+      if (i >= N - 1) sorted = true;
+      draw(j, j + 1);
+      return sorted;
+    },
+  };
+}
+
+function mandelbrotEngine(canvas, ctx) {
+  const W = 70, H = 50;
+  canvas.width = W; canvas.height = H;
+  const centerX = -0.7436438870371587, centerY = 0.13182590420533;
+  let scale = 3.2, frame = 0;
+
+  const palette = (t) => [Math.floor(9 * (1 - t) * t * t * t * 255), Math.floor(15 * (1 - t) * (1 - t) * t * t * 255), Math.floor(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255)];
+
+  function render(maxIter) {
+    const img = ctx.createImageData(W, H);
+    for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+      const cx = centerX + (px / W - 0.5) * scale;
+      const cy = centerY + (py / H - 0.5) * scale * (H / W);
+      let zr = 0, zi = 0, it = 0;
+      while (zr * zr + zi * zi <= 4 && it < maxIter) { const nzr = zr * zr - zi * zi + cx; zi = 2 * zr * zi + cy; zr = nzr; it++; }
+      const idx = (py * W + px) * 4;
+      if (it === maxIter) { img.data[idx] = 6; img.data[idx + 1] = 8; img.data[idx + 2] = 14; }
+      else { const [r, g, b] = palette(it / maxIter); img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b; }
+      img.data[idx + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  return {
+    step() {
+      frame++;
+      render(Math.min(160, 40 + frame * 2));
+      scale *= 0.955;
+      return scale < 0.0015 || frame > 90;
+    },
+  };
+}
+
+const ALGO_MODULES = [
+  { name: "Pathfinding", label: "BFS & A*", engine: pathfindingEngine },
+  { name: "Neuroevolution", label: "Snake AI", engine: neuroSnakeEngine },
+  { name: "Boids", label: "Flocking", engine: boidsEngine },
+  { name: "Voronoi", label: "Comp. Geometry", engine: voronoiEngine },
+  { name: "Conway", label: "Cellular Automata", engine: conwayEngine },
+  { name: "Sorting", label: "Sonified Sort", engine: sortingEngine },
+  { name: "Mandelbrot", label: "Fractals", engine: mandelbrotEngine },
+];
+
+/* Runs one engine on its own canvas, forever: draw frames via
+   requestAnimationFrame, and whenever step() reports the run is over,
+   freeze that last frame for 3s, then spin up a brand-new instance so
+   walls/seeds/arrays/boards are re-randomized each cycle. */
+function AlgoPreview({ engine, label }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let raf, pauseUntil = 0, current = engine(canvas, ctx);
+
+    function frame(t) {
+      if (t < pauseUntil) { raf = requestAnimationFrame(frame); return; }
+      const done = current.step(t);
+      if (done) { pauseUntil = t + 3000; current = engine(canvas, ctx); }
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [engine]);
+
+  return (
+    <div className="ap-gallery-slot ap-gallery-live">
+      <canvas ref={canvasRef} width={140} height={100} className="ap-algo-canvas" />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 /* =========================================================================
@@ -3783,6 +4147,12 @@ function Portfolio() {
         .ap-gallery-slot:hover { border-color: var(--circuit); color: var(--circuit); }
         .ap-gallery-slot svg { width: 20px; height: 20px; opacity: 0.7; }
         .ap-gallery-slot span { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.4; }
+        .ap-gallery-live { padding: 8px; gap: 6px; }
+        .ap-gallery-live:hover { border-color: var(--circuit); }
+        .ap-algo-canvas {
+          width: 100%; flex: 1; min-height: 0; border-radius: 6px; background: #0a0e14;
+          image-rendering: pixelated; image-rendering: crisp-edges; display: block;
+        }
 
         /* ---------- education ---------- */
         .ap-edu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
@@ -4200,6 +4570,9 @@ function Portfolio() {
               <p className="ap-p">
                 On top of the chain sits a live analytics layer built with Chart.js, turning raw voting data into heatmaps, pie breakdowns and bar comparisons that update as results come in.
               </p>
+              <p className="ap-p">
+                Built as my final degree project (TFG), AGORA stitches together a whole constellation of independent microservices — each one owns its own piece of the system and can fail, restart or redeploy without taking the rest down with it. If one service drops, the others keep running without a hitch.
+              </p>
               <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
                 The project is currently kept private — it's strong enough that a commercial release is on the table, so the source isn't public yet. If you want a demo, let me know.
               </p>
@@ -4221,7 +4594,7 @@ function Portfolio() {
                 </a>
               </div>
               <p className="ap-p">
-                A classic worm-eats-apples game built natively in Flutter — smooth animations, a growing snake body, collision detection and a live scoreboard, all running as a cross-platform mobile app.
+                A classic worm-eats-apples game built natively in Flutter — smooth animations, a growing snake body, collision detection and a live scoreboard, all running as a cross-platform mobile app. Originally built as a project for my DAW (Desarrollo de Aplicaciones Web) studies.
               </p>
               <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
                 Since you're already here: the board below plays by the exact same rules as the Flutter app — move, eat, grow, don't hit a wall or yourself — rebuilt with canvas so it runs in the browser. The real native Flutter source is on GitHub.
@@ -4256,6 +4629,34 @@ function Portfolio() {
                 ))}
               </div>
               <BlastConsole />
+            </GlowBorder>
+          </div>
+
+          <div className={`ap-reveal d4 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">Practice mode</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">ALGO::DASHBOARD — Seven Algorithms, One Canvas</h3>
+                <a className="ap-lock-badge" href={PROFILE.algoDashboardGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
+              </div>
+              <p className="ap-p">
+                A dashboard I built purely to sharpen my mathematical logic and exhaustive-reasoning muscles: seven independent algorithm modules — pathfinding (BFS / A*), a neuroevolved Snake, flocking boids, Voronoi diagrams, Conway's Game of Life, a sonified sorting visualizer and a zoomable Mandelbrot fractal — all hand-implemented in vanilla JavaScript over raw Canvas2D, with zero external libraries.
+              </p>
+              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
+                Below is a quick preview of every module included. Want to see how each algorithm actually works under the hood? The full source and the live playground are on GitHub.
+              </p>
+              <div className="ap-tech-row">
+                {["JavaScript", "Canvas2D", "A* Search", "Genetic Algorithms", "Fractals", "Zero Dependencies"].map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+              <div className="ap-gallery">
+                {ALGO_MODULES.map((m) => (
+                  <AlgoPreview key={m.name} engine={m.engine} label={m.label} />
+                ))}
+              </div>
             </GlowBorder>
           </div>
         </section>
