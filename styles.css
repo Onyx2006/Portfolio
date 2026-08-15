@@ -1,0 +1,382 @@
+:root {
+  --uv-cyan: #4ce7b4;
+  --uv-violet: #8b5cf6;
+  --uv-amber: #ffb02e;
+  --uv-ink: #080a0f;
+  --uv-panel-bg: rgba(10, 12, 20, 0.55);
+  --uv-panel-border: rgba(140, 170, 255, 0.25);
+}
+
+/* TRIGGER BUTTON */
+#btn-universe-mode {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 900; /* below the 3D overlay (999) but above the portfolio */
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 231, 196, 0.35);
+  background: linear-gradient(135deg, rgba(76, 231, 180, 0.16), rgba(139, 92, 246, 0.16));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #eafff6;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(76, 231, 180, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.6s ease, border-color 0.25s ease;
+  overflow: hidden;
+}
+
+#btn-universe-mode:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(76, 231, 180, 0.7);
+  box-shadow: 0 12px 40px rgba(76, 231, 180, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+#btn-universe-mode:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-universe-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 6px rgba(76, 231, 180, 0.8));
+}
+
+/* Soft pulsing glow behind the label, purely decorative */
+.btn-universe-glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, rgba(76, 231, 180, 0.35), transparent 60%);
+  animation: uv-pulse 3.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes uv-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50%      { opacity: 0.75; transform: scale(1.15); }
+}
+
+/* Hide the launcher while Universe Mode is active so it doesn't float on top of the 3D scene / re-trigger init. */
+body.universe-mode-on #btn-universe-mode {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* FULLSCREEN 3D STAGE (off by default — CPU/RAM friendly */
+#canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
+  background: #000005;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s ease-in-out;
+  overflow: hidden;
+}
+
+#canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Activated by space.js on click of #btn-universe-mode */
+#canvas-container.universe-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Fade out (and lock scrolling on) the traditional portfolio while
+   Universe Mode is active, per spec. */
+body.universe-mode-on {
+  overflow: hidden;
+}
+
+body.universe-mode-on #root {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease-in-out;
+}
+
+#root {
+  transition: opacity 1.2s ease-in-out;
+}
+
+/* LOADING STATE (shown briefly while Three.js boots) */
+#universe-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #cfe9ff;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  background: radial-gradient(ellipse at center, #0a0e1a 0%, #030307 75%);
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+#universe-loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.universe-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(140, 170, 255, 0.15);
+  border-top-color: var(--uv-cyan);
+  animation: uv-spin 0.9s linear infinite;
+}
+
+@keyframes uv-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* HUD + EXIT BUTTON */
+#universe-hud {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  z-index: 10;
+  color: #eafff6;
+  font-family: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+}
+
+#canvas-container.universe-active #universe-hud {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.universe-hud-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.universe-hud-title span {
+  color: var(--uv-amber);
+}
+
+.universe-hud-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(220, 230, 255, 0.55);
+  font-family: monospace;
+}
+
+#btn-exit-universe {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 10;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 12, 20, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #eafff6;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s, border-color 0.2s ease, background 0.2s ease;
+}
+
+#canvas-container.universe-active #btn-exit-universe {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#btn-exit-universe:hover {
+  border-color: rgba(76, 231, 180, 0.6);
+  background: rgba(76, 231, 180, 0.12);
+}
+
+/* FLOATING PROJECT PANEL ("spaceship console") */
+#planet-info-panel {
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%) translateX(0);
+  z-index: 20;
+  width: min(380px, 86vw);
+  max-height: 78vh;
+  overflow-y: auto;
+  padding: 26px 24px 22px;
+  border-radius: 18px;
+  background: var(--uv-panel-bg);
+  border: 1px solid var(--uv-panel-border);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  color: #eaf2ff;
+  font-family: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#planet-info-panel.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+#planet-info-panel.hidden {
+  display: none;
+}
+
+.pip-kicker {
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--uv-cyan);
+  margin-bottom: 6px;
+}
+
+.pip-title {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
+
+.pip-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: rgba(230, 238, 255, 0.82);
+  margin: 0 0 16px;
+}
+
+.pip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.pip-tag {
+  font-family: monospace;
+  font-size: 10.5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(230, 238, 255, 0.75);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pip-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eaf2ff;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.pip-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(76, 231, 180, 0.5);
+  background: rgba(76, 231, 180, 0.1);
+}
+
+.pip-btn.primary {
+  background: linear-gradient(135deg, rgba(76, 231, 180, 0.22), rgba(139, 92, 246, 0.22));
+  border-color: rgba(76, 231, 180, 0.4);
+}
+
+.pip-btn.ghost {
+  background: transparent;
+}
+
+.pip-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+  color: #eaf2ff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.pip-close:hover {
+  border-color: rgba(255, 100, 100, 0.5);
+  background: rgba(255, 100, 100, 0.12);
+}
+
+/* Small screens: panel becomes a bottom sheet instead of a side card */
+@media (max-width: 720px) {
+  #planet-info-panel {
+    right: 50%;
+    top: auto;
+    bottom: 16px;
+    transform: translateX(50%) translateY(0);
+    max-height: 56vh;
+  }
+
+  #planet-info-panel.visible {
+    transform: translateX(50%) translateY(0);
+  }
+
+  .universe-hud-hint {
+    display: none; /* keep the mobile HUD compact */
+  }
+}
+
+@media (max-width: 480px) {
+  #planet-info-panel {
+    max-width: 35vh;
+  }
+}
