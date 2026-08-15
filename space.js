@@ -10,6 +10,10 @@ const STAR_COUNT = 10000;
 const STAR_GROUPS = 6;
 const COMET_COUNT = 50;
 const COMET_TRAIL_LENGTH = 40;
+// A fixed "shower" direction every comet roughly follows — real meteor
+// showers all streak the same way across the sky even though they start
+// from all over.
+const COMET_FLOW_DIRECTION = new THREE.Vector3(0.55, -0.18, 0.8).normalize();
 const SHOOTING_STAR_COUNT = 15;
 const ACCRETION_FLOW_COUNT = 1100;
 const DEBRIS_BELT_COUNT = 400;
@@ -75,6 +79,7 @@ const PLANETS = [
     tilt: -0.1,
     hasMoon: true,
     ocean: true,
+    poisonMist: true,
     description:
       "A custom programming language designed and compiled from scratch: its own lexer, parser, type checker, and interpreter/compiler, featuring a vocabulary inspired by arcade shooters.",
     tags: ["Compiladores", "TypeScript", "Lexing", "Parsing", "Type Checking"],
@@ -1144,16 +1149,23 @@ function createComets() {
 }
 
 function resetComet(comet) {
-   const start = new THREE.Vector3(
-    THREE.MathUtils.randFloatSpread(260),
-    THREE.MathUtils.randFloatSpread(120) + 50,
-    -320 - Math.random() * 160
-  );
-  const direction = new THREE.Vector3(
-    THREE.MathUtils.randFloatSpread(1) + 0.4,
-    -0.25 - Math.random() * 0.3,
-    1
-  ).normalize();
+  const lateral1 = new THREE.Vector3(0, 1, 0).cross(COMET_FLOW_DIRECTION).normalize();
+  const lateral2 = COMET_FLOW_DIRECTION.clone().cross(lateral1).normalize();
+
+  const start = COMET_FLOW_DIRECTION.clone()
+    .multiplyScalar(-(260 + Math.random() * 220))
+    .addScaledVector(lateral1, THREE.MathUtils.randFloatSpread(460))
+    .addScaledVector(lateral2, THREE.MathUtils.randFloatSpread(460));
+
+  const direction = COMET_FLOW_DIRECTION.clone()
+    .add(
+      new THREE.Vector3(
+        THREE.MathUtils.randFloatSpread(0.14),
+        THREE.MathUtils.randFloatSpread(0.14),
+        THREE.MathUtils.randFloatSpread(0.14)
+      )
+    )
+    .normalize();
 
   comet.group.position.copy(start);
   comet.velocity.copy(direction).multiplyScalar(75 + Math.random() * 60);
@@ -1234,16 +1246,15 @@ function triggerShootingStar() {
   const idle = state.shootingStars.find((s) => !s.active);
   if (!idle) return;
 
-  const start = new THREE.Vector3(
-    THREE.MathUtils.randFloatSpread(340),
-    120 + Math.random() * 160,
-    THREE.MathUtils.randFloatSpread(340)
+  // Start anywhere around the scene and cross through the middle, rather
+  // than always falling from directly overhead.
+  const start = randomOnUnitSphere().multiplyScalar(280 + Math.random() * 160);
+  const aim = new THREE.Vector3(
+    THREE.MathUtils.randFloatSpread(180),
+    THREE.MathUtils.randFloatSpread(180),
+    THREE.MathUtils.randFloatSpread(180)
   );
-  const direction = new THREE.Vector3(
-    THREE.MathUtils.randFloatSpread(1),
-    -1,
-    THREE.MathUtils.randFloatSpread(1)
-  ).normalize();
+  const direction = aim.sub(start).normalize();
 
   idle.start.copy(start);
   idle.velocity.copy(direction).multiplyScalar(300 + Math.random() * 200);
@@ -1972,6 +1983,131 @@ function updateWaterPlanet(group, data, delta) {
   updateDroplets(water.droplets, delta);
 }
 
+function createPoisonMist(group, data) {
+  const hue = 96; // sickly yellow-green
+
+  // Close-hugging haze shell, always present, slowly swirling.
+  const shellCount = 70;
+  const shellPositions = new Float32Array(shellCount * 3);
+  const shellRecords = [];
+  for (let i = 0; i < shellCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = data.size * (1.05 + Math.random() * 0.55);
+    const height = (Math.random() - 0.5) * data.size * 1.2;
+    shellRecords.push({ angle, radius, height, speed: 0.03 + Math.random() * 0.08 });
+    shellPositions[i * 3] = Math.cos(angle) * radius;
+    shellPositions[i * 3 + 1] = height;
+    shellPositions[i * 3 + 2] = Math.sin(angle) * radius;
+  }
+  const shellGeometry = new THREE.BufferGeometry();
+  shellGeometry.setAttribute("position", new THREE.BufferAttribute(shellPositions, 3));
+  const shell = new THREE.Points(
+    shellGeometry,
+    new THREE.PointsMaterial({
+      map: buildCloudPuffTexture(hue),
+      size: data.size * 0.62,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      sizeAttenuation: true,
+    })
+  );
+  group.add(shell);
+
+  // Occasional gas plumes venting from a random surface point, billowing
+  // outward and fading — the restless, mysterious touch.
+  const plumeCount = 60;
+  const plumePositions = new Float32Array(plumeCount * 3).fill(-9999);
+  const plumeGeometry = new THREE.BufferGeometry();
+  plumeGeometry.setAttribute("position", new THREE.BufferAttribute(plumePositions, 3));
+  const plumes = new THREE.Points(
+    plumeGeometry,
+    new THREE.PointsMaterial({
+      map: buildCloudPuffTexture(hue + 12),
+      size: data.size * 0.5,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      sizeAttenuation: true,
+    })
+  );
+  group.add(plumes);
+  const plumeParticles = new Array(plumeCount).fill(0).map(() => ({
+    active: false,
+    life: 0,
+    duration: 0,
+    pos: new THREE.Vector3(),
+    vel: new THREE.Vector3(),
+  }));
+
+  // A faint toxic glow that flickers like something breathing underneath.
+  const glow = new THREE.PointLight(0x8dff5e, 0.35, data.size * 8, 2);
+  group.add(glow);
+
+  group.userData.poisonMist = {
+    shell,
+    shellRecords,
+    plumes,
+    plumeParticles,
+    glow,
+    nextPlumeAt: 0.4 + Math.random() * 0.6,
+  };
+}
+
+function updatePoisonMist(group, data, delta, elapsed) {
+  const mist = group.userData.poisonMist;
+  if (!mist) return;
+
+  const shellAttr = mist.shell.geometry.getAttribute("position");
+  mist.shellRecords.forEach((c, i) => {
+    c.angle += c.speed * delta;
+    shellAttr.setXYZ(i, Math.cos(c.angle) * c.radius, c.height, Math.sin(c.angle) * c.radius);
+  });
+  shellAttr.needsUpdate = true;
+  mist.shell.material.opacity = 0.2 + Math.sin(elapsed * 0.5) * 0.06;
+
+  mist.nextPlumeAt -= delta;
+  if (mist.nextPlumeAt <= 0) {
+    const idle = mist.plumeParticles.find((p) => !p.active);
+    if (idle) {
+      const dir = randomOnUnitSphere();
+      idle.pos.copy(dir).multiplyScalar(data.size * 1.02);
+      idle.vel.copy(dir).multiplyScalar(data.size * (0.08 + Math.random() * 0.1));
+      idle.active = true;
+      idle.life = 0;
+      idle.duration = 2.5 + Math.random() * 2.2;
+    }
+    mist.nextPlumeAt = 0.15 + Math.random() * 0.35;
+  }
+
+  const plumeAttr = mist.plumes.geometry.getAttribute("position");
+  mist.plumeParticles.forEach((p, i) => {
+    if (p.active) {
+      p.life += delta;
+      const t = p.life / p.duration;
+      if (t >= 1) {
+        p.active = false;
+        plumeAttr.setXYZ(i, 0, -9999, 0);
+        return;
+      }
+      p.vel.multiplyScalar(0.985);
+      p.pos.addScaledVector(p.vel, delta);
+      // A light wobble so the plume drifts, rather than moving in a
+      // perfectly straight, mechanical line.
+      p.pos.x += Math.sin(elapsed * 1.5 + i) * 0.01;
+      p.pos.z += Math.cos(elapsed * 1.3 + i) * 0.01;
+      plumeAttr.setXYZ(i, p.pos.x, p.pos.y, p.pos.z);
+    } else {
+      plumeAttr.setXYZ(i, 0, -9999, 0);
+    }
+  });
+  plumeAttr.needsUpdate = true;
+
+  mist.glow.intensity = 0.28 + Math.sin(elapsed * 0.8) * 0.14 + (Math.random() < 0.01 ? 0.35 : 0);
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2151,6 +2287,10 @@ function createPlanets() {
       createWaterPlanet(group, data);
     }
 
+    if (data.poisonMist) {
+      createPoisonMist(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -2214,6 +2354,10 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.waterPlanet) {
       updateWaterPlanet(group, data, delta);
+    }
+
+    if (group.userData.poisonMist) {
+      updatePoisonMist(group, data, delta, elapsed);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
