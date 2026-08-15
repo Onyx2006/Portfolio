@@ -28,6 +28,13 @@ const SUNS = [
   { position: new THREE.Vector3(-420, 70, 280), size: 12, hue: 46 },
 ];
 
+const STORM_PLANET = {
+  position: new THREE.Vector3(-300, -110, -480),
+  size: 46,
+  hue: 258, // violet-blue
+  boltCount: 7,
+};
+
 const PLANETS = [
   {
     id: "algorithms",
@@ -272,6 +279,7 @@ function initUniverse() {
   createStarfield();
   createDeepSky();
   createSuns();
+  createStormPlanet();
   createBlackHole();
   createAccretionFlow();
   createDebrisBelt();
@@ -855,6 +863,201 @@ function updateSuns(delta) {
   state.suns.forEach((s) => {
     s.mesh.material.map.offset.x += delta * s.spinSpeed;
     s.mesh.rotation.y += delta * 0.04;
+  });
+}
+
+/* 9b. STORM PLANET — ambient violet gas giant with real crackling lightning */
+function buildStormTexture(hue) {
+  const w = 512;
+  const h = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+
+  const base = new THREE.Color().setHSL(hue / 360, 0.55, 0.14);
+  ctx.fillStyle = rgba(base, 1);
+  ctx.fillRect(0, 0, w, h);
+
+  const bandCount = 11;
+  for (let i = 0; i < bandCount; i++) {
+    const y = (i / bandCount) * h;
+    const bandH = (h / bandCount) * (0.5 + Math.random() * 0.8);
+    const lightness = 16 + Math.random() * 22;
+    ctx.fillStyle = `hsla(${hue + Math.random() * 30 - 15},60%,${lightness}%,${0.32 + Math.random() * 0.28})`;
+    ctx.fillRect(0, y, w, bandH);
+  }
+
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 34; i++) {
+    const x = Math.random() * w;
+    const y = Math.random() * h;
+    const r = 10 + Math.random() * 40;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `hsla(${hue + Math.random() * 40},80%,70%,0.35)`);
+    grad.addColorStop(1, `hsla(${hue},70%,50%,0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.5, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+
+  const polar = ctx.createLinearGradient(0, 0, 0, h);
+  polar.addColorStop(0, "rgba(210,220,255,0.3)");
+  polar.addColorStop(0.14, "rgba(210,220,255,0)");
+  polar.addColorStop(0.86, "rgba(210,220,255,0)");
+  polar.addColorStop(1, "rgba(210,220,255,0.3)");
+  ctx.fillStyle = polar;
+  ctx.fillRect(0, 0, w, h);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function randomOnUnitSphere() {
+  const v = new THREE.Vector3(
+    THREE.MathUtils.randFloatSpread(2),
+    THREE.MathUtils.randFloatSpread(2),
+    THREE.MathUtils.randFloatSpread(2)
+  );
+  return v.lengthSq() < 0.0001 ? new THREE.Vector3(1, 0, 0) : v.normalize();
+}
+
+function createStormBolts(group, radius) {
+  const bolts = [];
+  for (let i = 0; i < STORM_PLANET.boltCount; i++) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(8 * 3), 3));
+    geometry.setDrawRange(0, 0);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xe4d6ff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const line = new THREE.Line(geometry, material);
+    group.add(line);
+    bolts.push({ line, active: false, life: 0, duration: 0, midpoint: new THREE.Vector3() });
+  }
+
+  const flash = new THREE.PointLight(0xb9a2ff, 0, radius * 9, 2);
+  group.add(flash);
+
+  group.userData.stormBolts = { bolts, flash, radius, nextAt: 0.3 + Math.random() * 0.8 };
+}
+
+function triggerStormBolt(bolt, radius) {
+  const dirA = randomOnUnitSphere();
+  const dirB = dirA.clone().applyAxisAngle(randomOnUnitSphere(), 0.25 + Math.random() * 0.5);
+  const a = dirA.multiplyScalar(radius * 1.05);
+  const b = dirB.multiplyScalar(radius * 1.05);
+
+  const segments = 6;
+  const posAttr = bolt.line.geometry.getAttribute("position");
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const p = a.clone().lerp(b, t);
+    if (i > 0 && i < segments) {
+      const jitter = radius * 0.1;
+      p.x += (Math.random() - 0.5) * jitter;
+      p.y += (Math.random() - 0.5) * jitter;
+      p.z += (Math.random() - 0.5) * jitter;
+    }
+    posAttr.setXYZ(i, p.x, p.y, p.z);
+    if (i === Math.floor(segments / 2)) bolt.midpoint.copy(p);
+  }
+  bolt.line.geometry.setDrawRange(0, segments + 1);
+  posAttr.needsUpdate = true;
+
+  bolt.active = true;
+  bolt.life = 0;
+  bolt.duration = 0.08 + Math.random() * 0.14;
+}
+
+function createStormPlanet() {
+  const cfg = STORM_PLANET;
+  const group = new THREE.Group();
+  group.position.copy(cfg.position);
+
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(cfg.size, 64, 64),
+    new THREE.MeshStandardMaterial({
+      map: buildStormTexture(cfg.hue),
+      emissive: new THREE.Color().setHSL(cfg.hue / 360, 0.6, 0.08),
+      emissiveIntensity: 0.5,
+      roughness: 0.75,
+      metalness: 0.1,
+    })
+  );
+  group.add(mesh);
+
+  const atmosphereColor = new THREE.Color().setHSL(cfg.hue / 360, 0.9, 0.68).getHex();
+  const atmosphere = buildAtmosphere({ color: atmosphereColor, size: cfg.size });
+  group.add(atmosphere);
+
+  // Faint charged-dust ring, tinted to match the storm, catching the flashes.
+  const ringInner = cfg.size * 1.6;
+  const ringOuter = cfg.size * 2.4;
+  const ringGeometry = new THREE.RingGeometry(ringInner, ringOuter, 160, 12);
+  remapRingUVs(ringGeometry, ringInner, ringOuter);
+  const ring = new THREE.Mesh(
+    ringGeometry,
+    new THREE.MeshBasicMaterial({
+      map: buildRingTexture(new THREE.Color().setHSL(cfg.hue / 360, 0.85, 0.75).getHex()),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.55,
+    })
+  );
+  ring.rotation.x = Math.PI / 2.5;
+  group.add(ring);
+
+  createStormBolts(group, cfg.size);
+
+  state.scene.add(group);
+  state.stormPlanet = { group, mesh, atmosphere, ring };
+}
+
+function updateStormPlanet(delta, elapsed) {
+  const planet = state.stormPlanet;
+  if (!planet) return;
+
+  planet.mesh.material.map.offset.x += delta * 0.015;
+  planet.mesh.rotation.y += delta * 0.03;
+  planet.ring.rotation.z += delta * 0.02;
+  planet.atmosphere.material.uniforms.glowIntensity.value = 0.55 + Math.sin(elapsed * 0.6) * 0.12;
+
+  const storm = planet.group.userData.stormBolts;
+
+  storm.nextAt -= delta;
+  if (storm.nextAt <= 0) {
+    const idle = storm.bolts.find((b) => !b.active);
+    if (idle) {
+      triggerStormBolt(idle, storm.radius);
+      storm.flash.position.copy(idle.midpoint);
+      storm.flash.intensity = 3.5 + Math.random() * 2.5;
+    }
+    // Bursts of 2-4 strikes close together, then a calmer gap — reads as a
+    // real storm rather than a metronome.
+    storm.nextAt = Math.random() < 0.6 ? 0.05 + Math.random() * 0.18 : 0.6 + Math.random() * 1.2;
+  }
+
+  storm.flash.intensity = Math.max(0, storm.flash.intensity - delta * 9);
+
+  storm.bolts.forEach((bolt) => {
+    if (!bolt.active) return;
+    bolt.life += delta;
+    const t = bolt.life / bolt.duration;
+    if (t >= 1) {
+      bolt.active = false;
+      bolt.line.material.opacity = 0;
+      return;
+    }
+    bolt.line.material.opacity = (1 - t) * (0.7 + Math.random() * 0.3);
   });
 }
 
@@ -1727,6 +1930,7 @@ function animate() {
   updateStarfield(elapsed);
   updateDeepSky(delta);
   updateSuns(delta);
+  updateStormPlanet(delta, elapsed);
   updateBlackHole(delta);
   updateAccretionFlow(delta);
   updateDebrisBelt(delta);
