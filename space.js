@@ -34,6 +34,13 @@ const STORM_CLOUD_COUNT = 90;
 const STORM_BOLT_COUNT = 18;
 const STORM_FRAGMENT_COUNT = 90;
 
+// FX budget for the water planet (surface jets + surrounding bubble shell +
+// droplets from popped bubbles).
+const WATER_JET_VENTS = 8;
+const WATER_JET_PARTICLES = 220;
+const WATER_BUBBLE_COUNT = 60;
+const WATER_DROPLET_COUNT = 80;
+
 const PLANETS = [
   {
     id: "algorithms",
@@ -42,9 +49,9 @@ const PLANETS = [
     color: 0x38f2c8,
     emissive: 0x0a2b24,
     size: 10,
-    orbitA: 190,
-    orbitB: 156,
-    speed: 0.05,
+    orbitA: 210,
+    orbitB: 210,
+    speed: 0.038,
     tilt: 0.60,
     hasRing: true,
     ringColor: 0x66ffe0,
@@ -62,9 +69,9 @@ const PLANETS = [
     color: 0x7c5cff,
     emissive: 0x140a33,
     size: 12,
-    orbitA: 200,
-    orbitB: 220,
-    speed: 0.036,
+    orbitA: 280,
+    orbitB: 280,
+    speed: 0.03,
     tilt: -0.1,
     hasMoon: true,
     ocean: true,
@@ -80,9 +87,9 @@ const PLANETS = [
     color: 0xff4d33,
     emissive: 0x2a0a04,
     size: 9,
-    orbitA: 171,
-    orbitB: 195,
-    speed: 0.027,
+    orbitA: 150,
+    orbitB: 150,
+    speed: 0.05,
     tilt: 0.22,
     hasStorm: true,
     lava: true,
@@ -98,8 +105,8 @@ const PLANETS = [
     color: 0xffb02e,
     emissive: 0x2e1800,
     size: 8,
-    orbitA: 250,
-    orbitB: 230,
+    orbitA: 430,
+    orbitB: 430,
     speed: 0.02,
     tilt: -0.18,
     hasRing: true,
@@ -119,10 +126,10 @@ const PLANETS = [
     color: 0xfff066,
     emissive: 0x3a2f00,
     size: 12,
-    orbitA: 300,
-    orbitB: 258,
+    orbitA: 500,
+    orbitB: 500,
     speed: 0.017,
-    tilt: 0.60,
+    tilt: 0.33,
     hasRing: true,
     ringColor: 0xfff2a3,
     hasAsteroids: true,
@@ -131,6 +138,25 @@ const PLANETS = [
     upcoming: true,
     description:
       "This one is still taking shape. A permanent electrical storm rages through its cloud belt, arcing between the surrounding asteroids and shattering them into drifting debris. Full details, source, and write-up land here soon.",
+    tags: ["Coming Soon"],
+    github: null,
+  },
+  {
+    id: "hydros",
+    kicker: "Project 06 — Coming Soon",
+    name: "HYDROS",
+    color: 0x2ea7ff,
+    emissive: 0x021826,
+    size: 11,
+    orbitA: 360,
+    orbitB: 360,
+    speed: 0.024,
+    tilt: 0.18,
+    ocean: true,
+    hasWaterFX: true,
+    upcoming: true,
+    description:
+      "This one is still taking shape too. Currents erupt straight off the surface in slow-arcing jets, and the whole planet drifts inside a shell of bubbles of every size — each one popping into a scatter of droplets once it floats too far out. Full details land here soon.",
     tags: ["Coming Soon"],
     github: null,
   },
@@ -1118,7 +1144,7 @@ function createComets() {
 }
 
 function resetComet(comet) {
-  const start = new THREE.Vector3(
+   const start = new THREE.Vector3(
     THREE.MathUtils.randFloatSpread(260),
     THREE.MathUtils.randFloatSpread(120) + 50,
     -320 - Math.random() * 160
@@ -1362,6 +1388,37 @@ function updateLavaEruptions(group, data, delta) {
   posAttr.needsUpdate = true;
 }
 
+function createMagmaWaves(group, data) {
+  const waveCount = 3;
+  const waves = [];
+  for (let i = 0; i < waveCount; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(data.size, 48, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0xff5a1f,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    group.add(mesh);
+    waves.push({ mesh, offset: (i / waveCount) * 10 + Math.random() * 0.6 });
+  }
+  group.userData.magmaWaves = { waves, cycle: 2.4 + Math.random() * 0.5 };
+}
+
+function updateMagmaWaves(group, elapsed) {
+  const magma = group.userData.magmaWaves;
+  if (!magma) return;
+  magma.waves.forEach((w) => {
+    const t = ((elapsed + w.offset) % magma.cycle) / magma.cycle; // loops 0..1
+    const wave = Math.sin(t * Math.PI); // 0 at rest (in the surface), 1 at full swell
+    w.mesh.scale.setScalar(1 + wave * 0.6);
+    w.mesh.material.opacity = wave * 0.4;
+  });
+}
+
 function createOceanBubbles(group, data) {
   const count = 90;
   const positions = new Float32Array(count * 3);
@@ -1415,6 +1472,7 @@ function updateOceanBubbles(group, data, delta) {
  *  a pool of jagged lightning bolts that jump between the clouds and the
  *  surrounding asteroid belt, and a shatter system that breaks a struck
  *  asteroid into scattering debris and quietly respawns it later. */
+
 function buildCloudPuffTexture(hue) {
   const size = 128;
   const canvas = document.createElement("canvas");
@@ -1683,6 +1741,237 @@ function updateElectricStorm(group, data, delta, elapsed) {
   }
 }
 
+function createWaterJets(group, data) {
+  const vents = [];
+  for (let i = 0; i < WATER_JET_VENTS; i++) {
+    const dir = randomOnUnitSphere();
+    vents.push({ origin: dir.clone().multiplyScalar(data.size), normal: dir, timer: Math.random() * 0.3 });
+  }
+
+  const positions = new Float32Array(WATER_JET_PARTICLES * 3).fill(-9999);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const points = new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({
+      color: 0x9fe8ff,
+      size: 0.45,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  group.add(points);
+
+  const particles = new Array(WATER_JET_PARTICLES).fill(0).map(() => ({
+    active: false,
+    life: 0,
+    duration: 0,
+    pos: new THREE.Vector3(),
+    vel: new THREE.Vector3(),
+  }));
+
+  return { points, particles, vents };
+}
+
+function updateWaterJets(jets, data, delta) {
+  jets.vents.forEach((vent) => {
+    vent.timer -= delta;
+    if (vent.timer <= 0) {
+      const idle = jets.particles.find((p) => !p.active);
+      if (idle) {
+        idle.pos.copy(vent.origin);
+        const dir = vent.normal.clone();
+        dir.x += (Math.random() - 0.5) * 0.3;
+        dir.y += (Math.random() - 0.5) * 0.3;
+        dir.z += (Math.random() - 0.5) * 0.3;
+        idle.vel.copy(dir.normalize()).multiplyScalar(data.size * (0.55 + Math.random() * 0.35));
+        idle.active = true;
+        idle.life = 0;
+        idle.duration = 1.0 + Math.random() * 0.6;
+      }
+      vent.timer = 0.03 + Math.random() * 0.05;
+    }
+  });
+
+  const posAttr = jets.points.geometry.getAttribute("position");
+  jets.particles.forEach((p, i) => {
+    if (p.active) {
+      p.life += delta;
+      const t = p.life / p.duration;
+      if (t >= 1) {
+        p.active = false;
+        posAttr.setXYZ(i, 0, -9999, 0);
+        return;
+      }
+      // Simulated gravity always pulling back toward the planet's core, so
+      // each jet arcs like a real fountain instead of flying off straight.
+      const pull = p.pos.clone().normalize().multiplyScalar(-data.size * 1.6 * delta);
+      p.vel.add(pull);
+      p.pos.addScaledVector(p.vel, delta);
+      posAttr.setXYZ(i, p.pos.x, p.pos.y, p.pos.z);
+    } else {
+      posAttr.setXYZ(i, 0, -9999, 0);
+    }
+  });
+  posAttr.needsUpdate = true;
+}
+
+function createDropletPool(group) {
+  const positions = new Float32Array(WATER_DROPLET_COUNT * 3).fill(-9999);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const points = new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({
+      color: 0xcdf4ff,
+      size: 0.5,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  group.add(points);
+
+  const particles = new Array(WATER_DROPLET_COUNT).fill(0).map(() => ({
+    active: false,
+    life: 0,
+    duration: 0,
+    pos: new THREE.Vector3(),
+    vel: new THREE.Vector3(),
+  }));
+
+  return { points, particles };
+}
+
+function spawnDropletBurst(droplets, origin, size) {
+  let toSpawn = 10 + Math.floor(Math.random() * 10);
+  for (const p of droplets.particles) {
+    if (toSpawn <= 0) break;
+    if (p.active) continue;
+    p.active = true;
+    p.life = 0;
+    p.duration = 0.4 + Math.random() * 0.5;
+    p.pos.copy(origin);
+    p.vel.copy(randomOnUnitSphere()).multiplyScalar((4 + Math.random() * 8) * (0.6 + size));
+    toSpawn--;
+  }
+}
+
+function updateDroplets(droplets, delta) {
+  const posAttr = droplets.points.geometry.getAttribute("position");
+  droplets.particles.forEach((p, i) => {
+    if (p.active) {
+      p.life += delta;
+      const t = p.life / p.duration;
+      if (t >= 1) {
+        p.active = false;
+        posAttr.setXYZ(i, 0, -9999, 0);
+        return;
+      }
+      p.vel.multiplyScalar(0.92);
+      p.pos.addScaledVector(p.vel, delta);
+      posAttr.setXYZ(i, p.pos.x, p.pos.y, p.pos.z);
+    } else {
+      posAttr.setXYZ(i, 0, -9999, 0);
+    }
+  });
+  posAttr.needsUpdate = true;
+}
+
+function createBubbleShell(group, data) {
+  const geometry = new THREE.SphereGeometry(1, 12, 12);
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0xeaf9ff,
+    transparent: true,
+    opacity: 0.1,
+    roughness: 0.05,
+    metalness: 0,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const bubbles = new THREE.InstancedMesh(geometry, material, WATER_BUBBLE_COUNT);
+  const dummy = new THREE.Object3D();
+  const records = [];
+
+  for (let i = 0; i < WATER_BUBBLE_COUNT; i++) {
+    const dir = randomOnUnitSphere();
+    const radius = data.size * (1.15 + Math.random() * 1.8);
+    const size = data.size * (0.035 + Math.random() * 0.09);
+    const speed = data.size * (0.15 + Math.random() * 0.35);
+    dummy.position.copy(dir).multiplyScalar(radius);
+    dummy.scale.setScalar(size);
+    dummy.updateMatrix();
+    bubbles.setMatrixAt(i, dummy.matrix);
+    records.push({ index: i, dir, radius, size, speed, active: true, respawnTimer: 0 });
+  }
+  group.add(bubbles);
+
+  return { bubbles, records, popRadius: data.size * 3.2 };
+}
+
+function updateBubbleShell(shell, droplets, data, delta) {
+  const dummy = new THREE.Object3D();
+  let changed = false;
+
+  shell.records.forEach((r) => {
+    if (!r.active) {
+      r.respawnTimer -= delta;
+      if (r.respawnTimer > 0) return;
+      r.active = true;
+      r.dir = randomOnUnitSphere();
+      r.radius = data.size * 1.15;
+      r.size = data.size * (0.035 + Math.random() * 0.09);
+      r.speed = data.size * (0.15 + Math.random() * 0.35);
+    }
+
+    // Gentle organic wobble so the drift never looks perfectly radial.
+    r.dir.x += (Math.random() - 0.5) * 0.02;
+    r.dir.y += (Math.random() - 0.5) * 0.02;
+    r.dir.z += (Math.random() - 0.5) * 0.02;
+    r.dir.normalize();
+    r.radius += r.speed * delta;
+
+    if (r.radius > shell.popRadius) {
+      spawnDropletBurst(droplets, r.dir.clone().multiplyScalar(r.radius), r.size);
+      r.active = false;
+      r.respawnTimer = 0.4 + Math.random() * 1.2;
+      dummy.position.set(0, 0, 0);
+      dummy.scale.setScalar(0.0001);
+      dummy.updateMatrix();
+      shell.bubbles.setMatrixAt(r.index, dummy.matrix);
+      changed = true;
+      return;
+    }
+
+    dummy.position.copy(r.dir).multiplyScalar(r.radius);
+    dummy.scale.setScalar(r.size);
+    dummy.updateMatrix();
+    shell.bubbles.setMatrixAt(r.index, dummy.matrix);
+    changed = true;
+  });
+
+  if (changed) shell.bubbles.instanceMatrix.needsUpdate = true;
+}
+
+function createWaterPlanet(group, data) {
+  const jets = createWaterJets(group, data);
+  const droplets = createDropletPool(group);
+  const shell = createBubbleShell(group, data);
+  group.userData.waterPlanet = { jets, droplets, shell };
+}
+
+function updateWaterPlanet(group, data, delta) {
+  const water = group.userData.waterPlanet;
+  updateWaterJets(water.jets, data, delta);
+  updateBubbleShell(water.shell, water.droplets, data, delta);
+  updateDroplets(water.droplets, delta);
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -1766,6 +2055,7 @@ function createPlanets() {
       group.add(lavaMesh);
       group.userData.lavaOverlay = lavaMesh;
       createLavaEruptions(group, data);
+      createMagmaWaves(group, data);
     }
 
     if (data.ocean) {
@@ -1857,6 +2147,10 @@ function createPlanets() {
       createElectricStorm(group, data);
     }
 
+    if (data.hasWaterFX) {
+      createWaterPlanet(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -1907,6 +2201,7 @@ function updatePlanets(delta, elapsed) {
       group.userData.lavaOverlay.material.map.offset.x += delta * 0.03;
       group.userData.lavaOverlay.material.opacity = 0.7 + 0.25 * Math.sin(elapsed * 1.4);
       updateLavaEruptions(group, data, delta);
+      updateMagmaWaves(group, elapsed);
     }
 
     if (group.userData.bubbles) {
@@ -1915,6 +2210,10 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.electricStorm) {
       updateElectricStorm(group, data, delta, elapsed);
+    }
+
+    if (group.userData.waterPlanet) {
+      updateWaterPlanet(group, data, delta);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
