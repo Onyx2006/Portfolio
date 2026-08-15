@@ -21,14 +21,17 @@
   }
 </style>
 
-<!-- Import map: lets the browser resolve bare "react" / "lucide-react" specifiers
-     used inside the JSX below, without any build step or bundler. -->
+<!-- Import map: lets the browser resolve bare "react" / "lucide-react" / "three"
+     specifiers used inside the JSX below and inside space.js, without any
+     build step or bundler -->
 <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@18.3.1",
     "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
-    "lucide-react": "https://esm.sh/lucide-react@0.383.0?external=react"
+    "lucide-react": "https://esm.sh/lucide-react@0.383.0?external=react",
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
 </script>
@@ -1336,9 +1339,37 @@ window.BlastScriptCore = {
 </script>
 
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div id="root"></div>
+
+<!-- UNIVERSE MODE — trigger button + fullscreen 3D overlay -->
+<!-- Floating call-to-action that launches Universe Mode -->
+<button id="btn-universe-mode" type="button" aria-label="Activate 3D Universe Mode">
+  <span class="btn-universe-glow" aria-hidden="true"></span>
+  <span class="btn-universe-text">Explore Interactive Universe Mode</span>
+</button>
+
+<!-- Fullscreen 3D stage. Hidden (opacity:0, pointer-events:none)
+     until JS adds the "universe-active" class on click. -->
+<div id="canvas-container" aria-hidden="true">
+
+  <!-- Three.js mounts its <canvas> here at runtime -->
+  <div id="universe-loading">
+    <div class="universe-spinner" aria-hidden="true"></div>
+    <p>Initializing universe engine…</p>
+  </div>
+
+  <div id="universe-hud">
+    <div class="universe-hud-title">Universe Mode</div>
+    <div class="universe-hud-hint">Drag to orbit / Scroll to zoom / Click a planet to explore</div>
+  </div>
+
+  <button id="btn-exit-universe" type="button"> Back to Portfolio </button>
+
+  <div id="planet-info-panel" class="hidden" role="dialog" aria-modal="true"></div>
+</div>
 
 <script type="text/babel" data-type="module" data-presets="react">
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -4817,5 +4848,11 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<Portfolio />);
 
 </script>
+
+<!-- UNIVERSE MODE — engine (lazy-initialized Three.js scene)
+     Loaded as a native ES module; it only wires up a click
+     listener on #btn-universe-mode at load time and does NOT
+     touch Three.js/WebGL until that button is actually clicked -->
+<script type="module" src="space.js"></script>
 </body>
 </html>
