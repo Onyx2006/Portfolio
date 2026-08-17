@@ -65,6 +65,7 @@ const PLANETS = [
       "A dashboard designed to sharpen algorithmic thinking: pathfinding (BFS/A), a neuroevolutionary Snake, boids, Voronoi diagrams, Conway’s Game of Life, a sonified sorting visualizer, and an interactive Mandelbrot fractal — all built in vanilla JavaScript with Canvas2D, with no external dependencies.",
     tags: ["JavaScript", "Canvas2D", "A* Search", "Algoritmos Genéticos", "Fractales"],
     github: "https://github.com/Onyx2006/ALGO-DASHBOARD.git",
+    demo: "https://onyx2006.github.io/ALGO-DASHBOARD/",
   },
   {
     id: "blastscript",
@@ -143,7 +144,7 @@ const PLANETS = [
     description:
       "A crypto market terminal with a professional trading-desk look, built like TradingView from scratch: a hand-written Canvas2D charting engine with real candlesticks, Heikin-Ashi, OHLC bars, and indicators computed by hand — SMA, EMA, Bollinger Bands, RSI, MACD — all synced to a live crosshair. Market data streams in from the public CoinGecko API, no backend required.",
     tags: ["Canvas2D", "CoinGecko API", "Zero Dependencies"],
-    github: null,
+    github: "https://github.com/Onyx2006/Vertex",
     demo: "https://onyx2006.github.io/Vertex/",
   },
   {
@@ -2478,7 +2479,6 @@ function showPanel(data) {
       ${demoButton}
       ${githubButton}
       <button class="pip-btn ghost" type="button" data-action="close">Close &amp; return to orbit</button>
-      <button class="pip-btn ghost" type="button" data-action="exit">Back to Traditional Portfolio</button>
     </div>
   `;
   dom.panel.classList.remove("hidden");

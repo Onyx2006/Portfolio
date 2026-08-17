@@ -1393,6 +1393,8 @@ const PROFILE = {
   linkedin: "https://www.linkedin.com/in/oliver-gamboa-mesa/",
   snakeGithub: "https://github.com/Onyx2006/flutter-snake",
   algoDashboardGithub: "https://github.com/Onyx2006/ALGO-DASHBOARD",
+  algoDashboardDemo: "https://onyx2006.github.io/ALGO-DASHBOARD/",
+  vertexGithub: "https://github.com/Onyx2006/Vertex",
   vertexDemo: "https://onyx2006.github.io/Vertex/",
   photo: "me.jpg",
 };
@@ -4174,6 +4176,7 @@ function Portfolio() {
           display: block; width: 100%; border-radius: 12px; border: 1px solid var(--line);
           box-shadow: 0 20px 50px -20px rgba(0,0,0,0.6); margin: 4px 0 22px;
         }
+        .ap-project-links-extra { display: flex; flex-wrap: wrap; gap: 10px; margin: -6px 0 18px; }
         .ap-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
         @media (max-width: 760px) { .ap-gallery { grid-template-columns: repeat(2, 1fr); } }
         .ap-gallery-slot {
@@ -4678,6 +4681,11 @@ function Portfolio() {
                   <Github /> View on GitHub
                 </a>
               </div>
+              <div className="ap-project-links-extra">
+                <a className="ap-lock-badge" href={PROFILE.algoDashboardDemo} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <ExternalLink /> View Live Demo
+                </a>
+              </div>
               <p className="ap-p">
                 A dashboard I built purely to sharpen my mathematical logic and exhaustive-reasoning muscles: seven independent algorithm modules — pathfinding (BFS / A*), a neuroevolved Snake, flocking boids, Voronoi diagrams, Conway's Game of Life, a sonified sorting visualizer and a zoomable Mandelbrot fractal — all hand-implemented in vanilla JavaScript over raw Canvas2D, with zero external libraries.
               </p>
@@ -4702,6 +4710,11 @@ function Portfolio() {
               <div className="ap-project-kicker">Power-up</div>
               <div className="ap-project-top">
                 <h3 className="ap-project-title">VERTEX — Crypto Market Terminal</h3>
+                <a className="ap-lock-badge" href={PROFILE.vertexGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
+              </div>
+              <div className="ap-project-links-extra">
                 <a className="ap-lock-badge" href={PROFILE.vertexDemo} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
                   <ExternalLink /> View Live Demo
                 </a>
