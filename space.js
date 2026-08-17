@@ -99,6 +99,7 @@ const PLANETS = [
     tilt: 0.22,
     hasStorm: true,
     lava: true,
+    hasBlockchainCubes: true,
     description:
       "A blockchain-based electronic voting system designed to provide secure, transparent, and tamper-resistant elections, with decentralized vote verification and an auditable voting process.",
     tags: ["Networking", "Microservices", "Security", "Automation", "Monitoring", "Private"],
@@ -142,8 +143,8 @@ const PLANETS = [
     hasElectricStorm: true,
     bands: true,
     description:
-      "A crypto market terminal with a professional trading-desk look, built like TradingView from scratch: a hand-written Canvas2D charting engine with real candlesticks, Heikin-Ashi, OHLC bars, and indicators computed by hand — SMA, EMA, Bollinger Bands, RSI, MACD — all synced to a live crosshair. Market data streams in from the public CoinGecko API, no backend required.",
-    tags: ["Canvas2D", "CoinGecko API", "Zero Dependencies"],
+      "A crypto market terminal with a professional trading-desk look, built like TradingView from scratch: a hand-written Canvas2D charting engine with real candlesticks, Heikin-Ashi, OHLC bars, and indicators computed by hand — SMA, EMA, Bollinger Bands, RSI, MACD — all synced to a live crosshair. Market data streams in from the public CoinGecko API, no backend required. Fitting that it orbits inside a permanent electrical storm — crypto markets never stand still either.",
+    tags: ["JavaScript", "Canvas2D", "CoinGecko API", "Indicadores Técnicos", "Zero Dependencies"],
     github: "https://github.com/Onyx2006/Vertex",
     demo: "https://onyx2006.github.io/Vertex/",
   },
@@ -2109,6 +2110,116 @@ function updatePoisonMist(group, data, delta, elapsed) {
   mist.glow.intensity = 0.28 + Math.sin(elapsed * 0.8) * 0.14 + (Math.random() < 0.01 ? 0.35 : 0);
 }
 
+function createBlockchainCubes(group, data) {
+  const COUNT = 28;
+  const TWISTS = 5;
+  const R = data.size * 1.95; // coil's distance from planet center
+  const r = data.size * 0.4; // how far the coil twists in/out and up/down
+  const cubeSize = data.size * 0.2;
+
+  const points = [];
+  for (let i = 0; i <= COUNT; i++) {
+    const t = (i / COUNT) * Math.PI * 2;
+    const tube = t * TWISTS;
+    const ringR = R + Math.cos(tube) * r;
+    points.push(
+      new THREE.Vector3(Math.cos(t) * ringR, Math.sin(tube) * r, Math.sin(t) * ringR)
+    );
+  }
+
+  const chain = new THREE.Group();
+  const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+  const edgesGeometry = new THREE.EdgesGeometry(cubeGeometry);
+  const linkGeometry = new THREE.BoxGeometry(cubeSize * 0.3, cubeSize * 0.3, 1);
+
+  const cubes = [];
+  const links = [];
+  const helper = new THREE.Object3D();
+
+  for (let i = 0; i < COUNT; i++) {
+    const cube = new THREE.Mesh(
+      cubeGeometry,
+      new THREE.MeshStandardMaterial({
+        color: 0x1c120d,
+        emissive: 0xff5a2e,
+        emissiveIntensity: 0.5,
+        roughness: 0.35,
+        metalness: 0.65,
+      })
+    );
+    cube.position.copy(points[i]);
+    helper.position.copy(points[i]);
+    helper.lookAt(points[i + 1]);
+    cube.quaternion.copy(helper.quaternion);
+    cube.rotation.x += Math.random() * 0.6 - 0.3;
+    cube.rotation.z += Math.random() * 0.6 - 0.3;
+
+    const edges = new THREE.LineSegments(
+      edgesGeometry,
+      new THREE.LineBasicMaterial({ color: 0xffd9b0, transparent: true, opacity: 0.95 })
+    );
+    cube.add(edges);
+
+    chain.add(cube);
+    cubes.push({ mesh: cube, edges, baseRotX: cube.rotation.x, baseRotZ: cube.rotation.z });
+
+    const from = points[i];
+    const to = points[i + 1];
+    const mid = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
+    const link = new THREE.Mesh(
+      linkGeometry,
+      new THREE.MeshBasicMaterial({
+        color: 0xffb27a,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    link.position.copy(mid);
+    link.scale.z = from.distanceTo(to) * 0.82;
+    helper.position.copy(mid);
+    helper.lookAt(to);
+    link.quaternion.copy(helper.quaternion);
+    chain.add(link);
+    links.push(link);
+  }
+
+  group.add(chain);
+  group.userData.blockchain = { chain, cubes, links, count: COUNT, pulse: 0 };
+}
+
+function updateBlockchainCubes(group, delta, elapsed) {
+  const bc = group.userData.blockchain;
+  if (!bc) return;
+
+  bc.chain.rotation.y += delta * 0.05;
+
+  // A bright pulse of "confirmation" travels around the ring, block by
+  // block, then loops — the whole coil never stops validating itself.
+  bc.pulse += delta * 6.5;
+  const activeIndex = Math.floor(bc.pulse) % bc.count;
+
+  bc.cubes.forEach((c, i) => {
+    // Gentle idle tumble so the chain never looks frozen even between pulses.
+    c.mesh.rotation.x = c.baseRotX + Math.sin(elapsed * 0.6 + i) * 0.08;
+    c.mesh.rotation.z = c.baseRotZ + Math.cos(elapsed * 0.5 + i) * 0.08;
+
+    let dist = Math.abs(i - activeIndex);
+    dist = Math.min(dist, bc.count - dist); // wrap around the ring
+    const glow = Math.max(0, 1 - dist / 3.2);
+    c.mesh.material.emissiveIntensity = 0.45 + glow * 1.8;
+    c.edges.material.opacity = 0.7 + glow * 0.3;
+  });
+
+  bc.links.forEach((link, i) => {
+    let dist = Math.abs(i - activeIndex);
+    dist = Math.min(dist, bc.count - dist);
+    const glow = Math.max(0, 1 - dist / 3.2);
+    link.material.opacity = 0.4 + glow * 0.6;
+  });
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2292,6 +2403,10 @@ function createPlanets() {
       createPoisonMist(group, data);
     }
 
+    if (data.hasBlockchainCubes) {
+      createBlockchainCubes(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -2359,6 +2474,10 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.poisonMist) {
       updatePoisonMist(group, data, delta, elapsed);
+    }
+
+    if (group.userData.blockchain) {
+      updateBlockchainCubes(group, delta, elapsed);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
