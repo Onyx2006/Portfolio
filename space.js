@@ -125,9 +125,9 @@ const PLANETS = [
     github: "https://github.com/Onyx2006/flutter-snake.git",
   },
   {
-    id: "tempest",
-    kicker: "Project 05 — Coming Soon",
-    name: "TEMPEST",
+    id: "vertex",
+    kicker: "Project 05 — Market Terminal",
+    name: "VERTEX",
     color: 0xfff066,
     emissive: 0x3a2f00,
     size: 12,
@@ -140,11 +140,11 @@ const PLANETS = [
     hasAsteroids: true,
     hasElectricStorm: true,
     bands: true,
-    upcoming: true,
     description:
-      "This one is still taking shape. A permanent electrical storm rages through its cloud belt, arcing between the surrounding asteroids and shattering them into drifting debris. Full details, source, and write-up land here soon.",
-    tags: ["Coming Soon"],
+      "A crypto market terminal with a professional trading-desk look, built like TradingView from scratch: a hand-written Canvas2D charting engine with real candlesticks, Heikin-Ashi, OHLC bars, and indicators computed by hand — SMA, EMA, Bollinger Bands, RSI, MACD — all synced to a live crosshair. Market data streams in from the public CoinGecko API, no backend required.",
+    tags: ["Canvas2D", "CoinGecko API", "Zero Dependencies"],
     github: null,
+    demo: "https://onyx2006.github.io/Vertex/",
   },
   {
     id: "hydros",
@@ -2444,14 +2444,25 @@ function resetCameraToOverview() {
 
 /* 16. FLOATING PROJECT PANEL ("spaceship console") */
 function showPanel(data) {
-  const githubButton = data.upcoming
-    ? ""
-    : `
-      <a class="pip-btn primary" href="${data.github}" target="_blank" rel="noreferrer"> View on GitHub
+  const githubButton = !data.upcoming && data.github
+    ? `
+      <a class="pip-btn${data.demo ? "" : " primary"}" href="${data.github}" target="_blank" rel="noreferrer"> View on GitHub
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.483 0-.237-.009-.866-.014-1.7-2.782.604-3.369-1.342-3.369-1.342-.455-1.157-1.11-1.465-1.11-1.465-.908-.621.069-.608.069-.608 1.004.07 1.532 1.032 1.532 1.032.892 1.529 2.341 1.087 2.91.831.091-.646.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844a9.56 9.56 0 0 1 2.504.337c1.909-1.294 2.748-1.025 2.748-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.338 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .269.18.58.688.482A10.001 10.001 0 0 0 22 12C22 6.477 17.523 2 12 2z"/>
         </svg>
-      </a>`;
+      </a>`
+    : "";
+
+  const demoButton = !data.upcoming && data.demo
+    ? `
+      <a class="pip-btn primary" href="${data.demo}" target="_blank" rel="noreferrer"> View Live Demo
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>`
+    : "";
 
   const tags = data.upcoming ? ["Upcoming Project"] : data.tags;
 
@@ -2464,6 +2475,7 @@ function showPanel(data) {
       ${tags.map((t) => `<span class="pip-tag">${t}</span>`).join("")}
     </div>
     <div class="pip-actions">
+      ${demoButton}
       ${githubButton}
       <button class="pip-btn ghost" type="button" data-action="close">Close &amp; return to orbit</button>
       <button class="pip-btn ghost" type="button" data-action="exit">Back to Traditional Portfolio</button>
