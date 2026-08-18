@@ -82,6 +82,7 @@ const PLANETS = [
     hasMoon: true,
     ocean: true,
     poisonMist: true,
+    ringSpherePlanet: true,
     description:
       "A custom programming language designed and compiled from scratch: its own lexer, parser, type checker, and interpreter/compiler, featuring a vocabulary inspired by arcade shooters.",
     tags: ["Compiladores", "TypeScript", "Lexing", "Parsing", "Type Checking"],
@@ -2398,6 +2399,148 @@ function updateGameOfLifeRing(group, delta) {
   }
 }
 
+/** BlastScript's planet */
+function createRingSpherePlanet(group, data) {
+  const RING_COUNT = 46;
+  const shell = new THREE.Group();
+  group.add(shell);
+
+  const rings = [];
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+  for (let i = 0; i < RING_COUNT; i++) {
+    const y = 1 - (i / (RING_COUNT - 1)) * 2;
+    const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    const baseNormal = new THREE.Vector3(
+      Math.cos(theta) * radiusAtY,
+      y,
+      Math.sin(theta) * radiusAtY
+    ).normalize();
+
+    const ringRadius = data.size * (0.9 + Math.random() * 0.18);
+    const edge = ringRadius * 0.03; // thin, blade-sharp edge
+
+    const geometry = new THREE.RingGeometry(ringRadius - edge, ringRadius + edge, 72);
+    const color = new THREE.Color().setHSL(
+      0.72 + (Math.random() - 0.5) * 0.07,
+      0.72,
+      0.58 + Math.random() * 0.14
+    );
+    const material = new THREE.MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.55,
+      transparent: true,
+      opacity: 0.82,
+      side: THREE.DoubleSide,
+      roughness: 0.35,
+      metalness: 0.5,
+      depthWrite: false,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), baseNormal);
+    shell.add(mesh);
+
+    rings.push({
+      mesh,
+      baseNormal,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.25 + Math.random() * 0.45,
+    });
+  }
+
+  // A single sword driven through the center of every ring, pole to pole —
+  // guard, grip and pommel below, a real tapered point above.
+  const sword = new THREE.Group();
+  const guardY = -data.size * 1.3;
+  const bladeLength = data.size * 3.1;
+
+  const blade = new THREE.Mesh(
+    buildBladeGeometry(bladeLength, data.size * 0.32, data.size * 0.055),
+    new THREE.MeshStandardMaterial({
+      color: 0xe4dfff,
+      emissive: 0x8f7bff,
+      emissiveIntensity: 0.4,
+      metalness: 0.85,
+      roughness: 0.18,
+    })
+  );
+  blade.position.y = guardY;
+  sword.add(blade);
+
+  const guard = new THREE.Mesh(
+    new THREE.BoxGeometry(data.size * 0.8, data.size * 0.1, data.size * 0.11),
+    new THREE.MeshStandardMaterial({ color: 0x342a5c, metalness: 0.75, roughness: 0.3 })
+  );
+  guard.position.y = guardY;
+  sword.add(guard);
+
+  const grip = new THREE.Mesh(
+    new THREE.CylinderGeometry(data.size * 0.07, data.size * 0.075, data.size * 0.5, 12),
+    new THREE.MeshStandardMaterial({ color: 0x201938, roughness: 0.6 })
+  );
+  grip.position.y = guardY - data.size * 0.3;
+  sword.add(grip);
+
+  const pommel = new THREE.Mesh(
+    new THREE.SphereGeometry(data.size * 0.1, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0x7c5cff, emissive: 0x7c5cff, emissiveIntensity: 0.7 })
+  );
+  pommel.position.y = grip.position.y - data.size * 0.3;
+  sword.add(pommel);
+
+  group.add(sword);
+
+  group.userData.ringSpherePlanet = { shell, rings, sword };
+}
+
+function buildBladeGeometry(length, width, thickness) {
+  const w = width / 2;
+  const shoulder = length * 0.8; // where the taper toward the point begins
+  const shape = new THREE.Shape();
+  shape.moveTo(-w, 0);
+  shape.lineTo(w, 0);
+  shape.lineTo(w * 0.75, shoulder);
+  shape.lineTo(0, length);
+  shape.lineTo(-w * 0.75, shoulder);
+  shape.closePath();
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: thickness,
+    bevelEnabled: true,
+    bevelThickness: thickness * 0.4,
+    bevelSize: width * 0.05,
+    bevelSegments: 2,
+    curveSegments: 1,
+  });
+  geometry.translate(0, 0, -thickness / 2);
+  return geometry;
+}
+
+function updateRingSpherePlanet(group, delta, elapsed) {
+  const rp = group.userData.ringSpherePlanet;
+  if (!rp) return;
+
+  rp.shell.rotation.y += delta * 0.035;
+  rp.sword.rotation.y += delta * 0.02;
+
+  const tangent = new THREE.Vector3();
+  const wobbled = new THREE.Vector3();
+
+  rp.rings.forEach((r) => {
+    // A plain ring is rotationally symmetric about its own normal, so
+    // spinning it in place would be invisible — instead each ring's tilt
+    // slowly precesses, which reads clearly and keeps the shell alive.
+    const helper = Math.abs(r.baseNormal.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    tangent.crossVectors(r.baseNormal, helper).normalize();
+    const wobble = Math.sin(elapsed * r.speed + r.phase) * 0.1;
+    wobbled.copy(r.baseNormal).addScaledVector(tangent, wobble).normalize();
+    r.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), wobbled);
+  });
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2432,6 +2575,10 @@ function createPlanets() {
     );
     mesh.userData.hovered = false;
     group.add(mesh);
+
+    if (data.ringSpherePlanet) {
+      mesh.visible = false;
+    }
 
     const atmosphere = buildAtmosphere(data);
     group.add(atmosphere);
@@ -2593,6 +2740,10 @@ function createPlanets() {
       createGameOfLifeRing(group, data);
     }
 
+    if (data.ringSpherePlanet) {
+      createRingSpherePlanet(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -2674,12 +2825,29 @@ function updatePlanets(delta, elapsed) {
       updateGameOfLifeRing(group, delta);
     }
 
+    if (group.userData.ringSpherePlanet) {
+      updateRingSpherePlanet(group, delta, elapsed);
+    }
+
     // Hover feedback: scale up + brighter emissive/atmosphere + the
     // targeting-reticle sprite fades in — impossible to miss.
     const hovered = mesh.userData.hovered;
     const targetScale = hovered ? 1.22 : 1;
     mesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
     mesh.material.emissiveIntensity = hovered ? 1.4 : 0.4;
+
+    // The invisible base sphere still drives hover state/scale for
+    // BlastScript — mirror it onto the visible ring shell + sword so the
+    // hover "grow & glow" feedback still reads normally.
+    if (group.userData.ringSpherePlanet) {
+      const rp = group.userData.ringSpherePlanet;
+      rp.shell.scale.copy(mesh.scale);
+      rp.sword.scale.copy(mesh.scale);
+      const targetEmissive = hovered ? 1.0 : 0.55;
+      rp.rings.forEach((r) => {
+        r.mesh.material.emissiveIntensity += (targetEmissive - r.mesh.material.emissiveIntensity) * 0.15;
+      });
+    }
 
     if (group.userData.atmosphere) {
       group.userData.atmosphere.material.uniforms.glowIntensity.value = hovered ? 1.3 : 0.5;
