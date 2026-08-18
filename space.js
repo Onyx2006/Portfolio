@@ -61,6 +61,7 @@ const PLANETS = [
     ringColor: 0x66ffe0,
     hasAsteroids: true,
     circuit: true,
+    hasGameOfLife: true,
     description:
       "A dashboard designed to sharpen algorithmic thinking: pathfinding (BFS/A), a neuroevolutionary Snake, boids, Voronoi diagrams, Conway’s Game of Life, a sonified sorting visualizer, and an interactive Mandelbrot fractal — all built in vanilla JavaScript with Canvas2D, with no external dependencies.",
     tags: ["JavaScript", "Canvas2D", "A* Search", "Algoritmos Genéticos", "Fractales"],
@@ -121,6 +122,7 @@ const PLANETS = [
     hasAsteroids: true,
     hasLightning: true,
     bands: true,
+    hasSnakeCreature: true,
     description:
       "A classic Snake game rebuilt with a modern twist: smooth controls, dynamic gameplay, increasing difficulty, and a polished interactive experience, all built on FLUTTER with Dart",
     tags: ["Game", "Funny", "Interactive", "Flutter", "Dart"],
@@ -2220,6 +2222,182 @@ function updateBlockchainCubes(group, delta, elapsed) {
   });
 }
 
+function createSnakeCreature(group, data) {
+  const SEGMENTS = 15;
+  const ringInner = data.size * 1.5;
+  const ringOuter = data.size * 2.9;
+  const midRadius = (ringInner + ringOuter) / 2;
+  const bandHalfWidth = (ringOuter - ringInner) * 0.5;
+  const angularSpacing = 0.1;
+
+  const snakeGroup = new THREE.Group();
+  snakeGroup.rotation.x = Math.PI / 2.3; // match the ring/asteroid band tilt
+  group.add(snakeGroup);
+
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffb02e,
+    emissive: 0x6b3900,
+    emissiveIntensity: 0.6,
+    roughness: 0.45,
+    metalness: 0.15,
+  });
+  const headMaterial = new THREE.MeshStandardMaterial({
+    color: 0xfff4cf,
+    emissive: 0xffb02e,
+    emissiveIntensity: 1,
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+  const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0f00 });
+
+  const segments = [];
+  for (let i = 0; i < SEGMENTS; i++) {
+    const t = i / (SEGMENTS - 1);
+    const scale = 1 - t * 0.55; // taper toward the tail
+    const isHead = i === 0;
+    const radius = data.size * 0.16 * (isHead ? 1.2 : scale);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 14), isHead ? headMaterial : bodyMaterial);
+    snakeGroup.add(mesh);
+    segments.push(mesh);
+  }
+
+  const head = segments[0];
+  const eyeGeometry = new THREE.SphereGeometry(data.size * 0.028, 8, 8);
+  const eyeL = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  const eyeR = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  head.add(eyeL, eyeR);
+
+  group.userData.snake = {
+    segments,
+    head,
+    eyeL,
+    eyeR,
+    midRadius,
+    bandHalfWidth,
+    angularSpacing,
+    headAngle: Math.random() * Math.PI * 2,
+  };
+}
+
+function updateSnakeCreature(group, delta) {
+  const snake = group.userData.snake;
+  if (!snake) return;
+
+  snake.headAngle += delta * 0.5; // travel speed around the ring
+
+  const posAt = (angle) => {
+    const wave = Math.sin(angle * 5) * snake.bandHalfWidth * 0.55;
+    const radius = snake.midRadius + wave;
+    return new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle * 5) * 0.4, Math.sin(angle) * radius);
+  };
+
+  snake.segments.forEach((mesh, i) => {
+    const angle = snake.headAngle - i * snake.angularSpacing;
+    mesh.position.copy(posAt(angle));
+  });
+
+  // Head looks a beat ahead, along its own direction of travel.
+  const forward = posAt(snake.headAngle + 0.05);
+  snake.head.lookAt(forward);
+
+  const headRadius = snake.head.geometry.parameters.radius;
+  snake.eyeL.position.set(-headRadius * 0.45, headRadius * 0.25, -headRadius * 0.75);
+  snake.eyeR.position.set(headRadius * 0.45, headRadius * 0.25, -headRadius * 0.75);
+}
+
+function createGameOfLifeRing(group, data) {
+  const COLS = 64;
+  const ROWS = 4;
+  const ringInner = data.size * 1.5;
+  const ringOuter = data.size * 2.9;
+  const cellSize = ((ringOuter - ringInner) / ROWS) * 0.6;
+
+  let cells = new Uint8Array(COLS * ROWS);
+  for (let i = 0; i < cells.length; i++) cells[i] = Math.random() < 0.32 ? 1 : 0;
+
+  const geometry = new THREE.BoxGeometry(cellSize, cellSize * 0.25, cellSize);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x8dffe0,
+    transparent: true,
+    opacity: 0.95,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const mesh = new THREE.InstancedMesh(geometry, material, COLS * ROWS);
+  mesh.rotation.x = Math.PI / 2.3; // match the ring/asteroid band tilt
+  group.add(mesh);
+
+  const positions = [];
+  for (let row = 0; row < ROWS; row++) {
+    const radius = ringInner + (row + 0.5) * ((ringOuter - ringInner) / ROWS);
+    for (let col = 0; col < COLS; col++) {
+      const angle = (col / COLS) * Math.PI * 2;
+      positions.push({ x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, angle });
+    }
+  }
+
+  const dummy = new THREE.Object3D();
+  const applyCells = () => {
+    positions.forEach((p, i) => {
+      dummy.position.set(p.x, 0, p.z);
+      dummy.rotation.y = -p.angle;
+      dummy.scale.setScalar(cells[i] ? 1 : 0.0001);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  applyCells();
+
+  group.userData.gameOfLife = { mesh, cells, cols: COLS, rows: ROWS, positions, dummy, applyCells, timer: 0.4 };
+}
+
+function stepGameOfLife(gol) {
+  const { cols, rows, cells } = gol;
+  const next = new Uint8Array(cols * rows);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      let neighbors = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        const r2 = row + dr;
+        if (r2 < 0 || r2 >= rows) continue; // finite band width, no wrap
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const c2 = (col + dc + cols) % cols; // wraps around the full ring
+          neighbors += cells[r2 * cols + c2];
+        }
+      }
+      const idx = row * cols + col;
+      const alive = cells[idx] === 1;
+      next[idx] = alive ? (neighbors === 2 || neighbors === 3 ? 1 : 0) : neighbors === 3 ? 1 : 0;
+    }
+  }
+
+  // Keep the ring alive forever: reseed if the board has gone (almost)
+  // completely dark or settled into total stillness.
+  let aliveCount = 0;
+  let changed = false;
+  for (let i = 0; i < next.length; i++) {
+    aliveCount += next[i];
+    if (next[i] !== cells[i]) changed = true;
+  }
+  if (aliveCount < cols * rows * 0.05 || !changed) {
+    for (let i = 0; i < next.length; i++) next[i] = Math.random() < 0.32 ? 1 : 0;
+  }
+  gol.cells = next;
+}
+
+function updateGameOfLifeRing(group, delta) {
+  const gol = group.userData.gameOfLife;
+  if (!gol) return;
+  gol.timer -= delta;
+  if (gol.timer <= 0) {
+    gol.timer = 0.4;
+    stepGameOfLife(gol);
+    gol.applyCells();
+  }
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2407,6 +2585,14 @@ function createPlanets() {
       createBlockchainCubes(group, data);
     }
 
+    if (data.hasSnakeCreature) {
+      createSnakeCreature(group, data);
+    }
+
+    if (data.hasGameOfLife) {
+      createGameOfLifeRing(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -2478,6 +2664,14 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.blockchain) {
       updateBlockchainCubes(group, delta, elapsed);
+    }
+
+    if (group.userData.snake) {
+      updateSnakeCreature(group, delta);
+    }
+
+    if (group.userData.gameOfLife) {
+      updateGameOfLifeRing(group, delta);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
