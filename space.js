@@ -79,7 +79,8 @@ const PLANETS = [
     orbitB: 200,
     speed: 0.03,
     tilt: -0.1,
-    hasMoon: true,
+    hasMoon: false,
+    electronMoons: false,
     ocean: true,
     poisonMist: true,
     ringSpherePlanet: true,
@@ -2430,9 +2431,9 @@ function createRingSpherePlanet(group, data) {
     const material = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
-      emissiveIntensity: 0.55,
+      emissiveIntensity: 0.4,
       transparent: true,
-      opacity: 0.82,
+      opacity: 0.72,
       side: THREE.DoubleSide,
       roughness: 0.35,
       metalness: 0.5,
@@ -2538,6 +2539,76 @@ function updateRingSpherePlanet(group, delta, elapsed) {
     const wobble = Math.sin(elapsed * r.speed + r.phase) * 0.1;
     wobbled.copy(r.baseNormal).addScaledVector(tangent, wobble).normalize();
     r.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), wobbled);
+  });
+}
+
+/** Three small glowing "electrons" */
+function createElectronMoons(group, data) {
+  const ORBIT_RADIUS = data.size * 2.3;
+  const configs = [
+    { size: data.size * 0.16, speed: 0.55, phase: 0, color: 0xb9a6ff },
+    { size: data.size * 0.13, speed: -0.42, phase: 2.1, color: 0x9dd8ff },
+    { size: data.size * 0.145, speed: 0.36, phase: 4.4, color: 0xffb6f0 },
+  ];
+
+  const glowTexture = buildGlowTexture();
+  const electrons = configs.map((cfg, i) => {
+    const pivot = new THREE.Group();
+    pivot.rotation.x = 1.3; // tilt the shared orbit plane
+    pivot.rotation.y = i * ((Math.PI * 2) / 3); // 0°, 120°, 240° apart — the atom pattern
+    group.add(pivot);
+
+    // Thin glowing orbit path, like the electron's "shell".
+    const pathPoints = [];
+    for (let a = 0; a <= 64; a++) {
+      const t = (a / 64) * Math.PI * 2;
+      pathPoints.push(new THREE.Vector3(Math.cos(t) * ORBIT_RADIUS, 0, Math.sin(t) * ORBIT_RADIUS));
+    }
+    const path = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pathPoints),
+      new THREE.LineBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.32 })
+    );
+    pivot.add(path);
+
+    const electron = new THREE.Mesh(
+      new THREE.SphereGeometry(cfg.size, 16, 16),
+      new THREE.MeshStandardMaterial({
+        color: cfg.color,
+        emissive: cfg.color,
+        emissiveIntensity: 1.1,
+        roughness: 0.3,
+        metalness: 0.2,
+      })
+    );
+    pivot.add(electron);
+
+    // A soft glow halo riding along with it.
+    const glow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: cfg.color,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    glow.scale.setScalar(cfg.size * 7);
+    electron.add(glow);
+
+    return { electron, radius: ORBIT_RADIUS, speed: cfg.speed, phase: cfg.phase };
+  });
+
+  group.userData.electronMoons = electrons;
+}
+
+function updateElectronMoons(group, delta, elapsed) {
+  const electrons = group.userData.electronMoons;
+  if (!electrons) return;
+  electrons.forEach((e) => {
+    const angle = elapsed * e.speed + e.phase;
+    e.electron.position.set(Math.cos(angle) * e.radius, 0, Math.sin(angle) * e.radius);
+    e.electron.rotation.y += delta * 1.4;
   });
 }
 
@@ -2696,6 +2767,10 @@ function createPlanets() {
       group.userData.moon = moon;
     }
 
+    if (data.electronMoons) {
+      createElectronMoons(group, data);
+    }
+
     if (data.hasStorm) {
       const storm = new THREE.Mesh(
         new THREE.SphereGeometry(data.size * 1.06, 48, 48),
@@ -2771,6 +2846,10 @@ function updatePlanets(delta, elapsed) {
       m.rotation.y += delta * 0.5;
     }
 
+    if (group.userData.electronMoons) {
+      updateElectronMoons(group, delta, elapsed);
+    }
+
     if (group.userData.storm) {
       group.userData.storm.rotation.y += delta * 0.6;
       const flash = Math.random() < 0.012 ? 0.5 : 0; // rare bright lightning flash
@@ -2841,16 +2920,19 @@ function updatePlanets(delta, elapsed) {
     // hover "grow & glow" feedback still reads normally.
     if (group.userData.ringSpherePlanet) {
       const rp = group.userData.ringSpherePlanet;
-      rp.shell.scale.copy(mesh.scale);
-      rp.sword.scale.copy(mesh.scale);
-      const targetEmissive = hovered ? 1.0 : 0.55;
+      const shellTargetScale = hovered ? 1.07 : 1;
+      rp.shell.scale.lerp(new THREE.Vector3(shellTargetScale, shellTargetScale, shellTargetScale), 0.15);
+      rp.sword.scale.lerp(new THREE.Vector3(shellTargetScale, shellTargetScale, shellTargetScale), 0.15);
+      const targetEmissive = hovered ? 0.3 : 0.21;
       rp.rings.forEach((r) => {
         r.mesh.material.emissiveIntensity += (targetEmissive - r.mesh.material.emissiveIntensity) * 0.15;
       });
     }
 
     if (group.userData.atmosphere) {
-      group.userData.atmosphere.material.uniforms.glowIntensity.value = hovered ? 1.3 : 0.5;
+      const atmosphereHover = data.ringSpherePlanet ? 0.75 : 1.3;
+      const atmosphereIdle = data.ringSpherePlanet ? 0.4 : 0.5;
+      group.userData.atmosphere.material.uniforms.glowIntensity.value = hovered ? atmosphereHover : atmosphereIdle;
     }
     if (group.userData.selectionRing) {
       const ring = group.userData.selectionRing;
