@@ -146,6 +146,7 @@ const PLANETS = [
     hasAsteroids: true,
     hasElectricStorm: true,
     bands: true,
+    marketCandles: true,
     description:
       "A crypto market terminal with a professional trading-desk look, built like TradingView from scratch: a hand-written Canvas2D charting engine with real candlesticks, Heikin-Ashi, OHLC bars, and indicators computed by hand — SMA, EMA, Bollinger Bands, RSI, MACD — all synced to a live crosshair. Market data streams in from the public CoinGecko API, no backend required. Fitting that it orbits inside a permanent electrical storm — crypto markets never stand still either.",
     tags: ["JavaScript", "Canvas2D", "CoinGecko API", "Indicadores Técnicos", "Zero Dependencies"],
@@ -2612,6 +2613,125 @@ function updateElectronMoons(group, delta, elapsed) {
   });
 }
 
+/* --- VERTEX: Japanese candlesticks planted directly on the planet's own
+ * surface — a thin high/low "wick" behind a wider open/close "body" */
+const CANDLE_BULL_COLOR = 0x35e296;
+const CANDLE_BEAR_COLOR = 0xff5768;
+
+function buildCandle(bodyWidth, wickWidth) {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(bodyWidth, 1, bodyWidth * 0.62),
+    new THREE.MeshStandardMaterial({
+      color: CANDLE_BULL_COLOR,
+      emissive: CANDLE_BULL_COLOR,
+      emissiveIntensity: 0.55,
+      roughness: 0.4,
+      metalness: 0.35,
+    })
+  );
+  group.add(body);
+
+  const wick = new THREE.Mesh(
+    new THREE.BoxGeometry(wickWidth, 1, wickWidth),
+    new THREE.MeshBasicMaterial({ color: CANDLE_BULL_COLOR, transparent: true, opacity: 0.85 })
+  );
+  group.add(wick);
+
+  return { group, body, wick };
+}
+
+function randomCandleState(maxHeight) {
+  const bullish = Math.random() > 0.48;
+  const bodyHeight = maxHeight * (0.18 + Math.random() * 0.55);
+  const wickPad = maxHeight * Math.random() * 0.4;
+  return { bullish, bodyHeight, wickHeight: bodyHeight + wickPad * 2 };
+}
+
+function applyCandleState(candle, state) {
+  candle.body.scale.y = Math.max(0.001, state.bodyHeight);
+  candle.body.position.y = state.bodyHeight / 2;
+  candle.wick.scale.y = Math.max(0.001, state.wickHeight);
+  candle.wick.position.y = state.wickHeight / 2;
+  const color = state.bullish ? CANDLE_BULL_COLOR : CANDLE_BEAR_COLOR;
+  candle.body.material.color.setHex(color);
+  candle.body.material.emissive.setHex(color);
+  candle.wick.material.color.setHex(color);
+}
+
+function retargetCandle(item, maxHeight) {
+  const state = randomCandleState(maxHeight);
+  item.targetBody = state.bodyHeight;
+  item.targetWick = state.wickHeight;
+  const color = state.bullish ? CANDLE_BULL_COLOR : CANDLE_BEAR_COLOR;
+  item.candle.body.material.color.setHex(color);
+  item.candle.body.material.emissive.setHex(color);
+  item.candle.wick.material.color.setHex(color);
+}
+
+function updateCandleField(items, delta) {
+  items.forEach((item) => {
+    item.bodyHeight += (item.targetBody - item.bodyHeight) * Math.min(1, delta * 3);
+    item.wickHeight += (item.targetWick - item.wickHeight) * Math.min(1, delta * 3);
+    item.candle.body.scale.y = Math.max(0.001, item.bodyHeight);
+    item.candle.body.position.y = item.bodyHeight / 2;
+    item.candle.wick.scale.y = Math.max(0.001, item.wickHeight);
+    item.candle.wick.position.y = item.wickHeight / 2;
+  });
+}
+
+function createVertexSurfaceCandles(group, data) {
+  const COUNT = 44;
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const maxHeight = data.size * 0.32;
+  const bodyWidth = data.size * 0.045;
+  const wickWidth = bodyWidth * 0.32;
+
+  const items = [];
+  for (let i = 0; i < COUNT; i++) {
+    const y = 1 - (i / (COUNT - 1)) * 2;
+    const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    const normal = new THREE.Vector3(
+      Math.cos(theta) * radiusAtY,
+      y,
+      Math.sin(theta) * radiusAtY
+    ).normalize();
+
+    const candle = buildCandle(bodyWidth, wickWidth);
+    candle.group.position.copy(normal.clone().multiplyScalar(data.size * 1.03));
+    candle.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    group.add(candle.group);
+
+    const state = randomCandleState(maxHeight);
+    applyCandleState(candle, state);
+    items.push({
+      candle,
+      bodyHeight: state.bodyHeight,
+      wickHeight: state.wickHeight,
+      targetBody: state.bodyHeight,
+      targetWick: state.wickHeight,
+    });
+  }
+
+  group.userData.vertexSurfaceCandles = { items, maxHeight, timer: 1.1 };
+}
+
+function updateVertexSurfaceCandles(group, delta) {
+  const sc = group.userData.vertexSurfaceCandles;
+  if (!sc) return;
+  sc.timer -= delta;
+  if (sc.timer <= 0) {
+    sc.timer = 1.1;
+    const tickCount = Math.max(1, Math.floor(sc.items.length * 0.22));
+    for (let n = 0; n < tickCount; n++) {
+      retargetCandle(sc.items[Math.floor(Math.random() * sc.items.length)], sc.maxHeight);
+    }
+  }
+  updateCandleField(sc.items, delta);
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2819,6 +2939,10 @@ function createPlanets() {
       createRingSpherePlanet(group, data);
     }
 
+    if (data.marketCandles) {
+      createVertexSurfaceCandles(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -2906,6 +3030,10 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.ringSpherePlanet) {
       updateRingSpherePlanet(group, delta, elapsed);
+    }
+
+    if (group.userData.vertexSurfaceCandles) {
+      updateVertexSurfaceCandles(group, delta);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
