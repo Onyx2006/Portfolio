@@ -1387,7 +1387,7 @@ const PROFILE = {
   name: "Oliver Gamboa Mesa",
   role: "Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist",
   location: "Marbella, Spain",
-  destination: "Ireland — November 2026",
+  destination: "Somewhere new?",
   email: "olivergamboamesa0850@gmail.com",
   github: "https://github.com/onyx2006",
   linkedin: "https://www.linkedin.com/in/oliver-gamboa-mesa/",
@@ -1495,7 +1495,7 @@ const BOOT_LINES = [
   "> connecting to blockchain node .... OK",
   "> loading piano.wasm ............... OK",
   "> checking passport ................ VALID",
-  "> next destination: IRELAND, NOV 2026",
+  "> next destination: UNKNOWN",
   "> READY.",
 ];
 
@@ -4893,9 +4893,9 @@ function Portfolio() {
           <div className={`ap-reveal ${visited.has("contact") ? "in-view" : ""}`}>
             <GlowBorder radius={18} className="ap-contact-card">
               <div className="ap-eyebrow"><MapPin size={13} /> 07 // NEXT LEVEL</div>
-              <h3 className="ap-contact-title">New map loading: <em>Ireland, Nov 2026</em></h3>
+              <h3 className="ap-contact-title">New map loading: <em>Where to next?</em></h3>
               <p className="ap-contact-p">
-                I'm relocating to Ireland this November and looking for a team ready to put creativity and solid engineering to work together. If that sounds like your kind of project, let's talk.
+                I'm looking for a new chapter full of new places, new challenges and new experiences. I'm open to wherever the next opportunity takes me, as long as I can keep learning, building and growing as a developer.
               </p>
               <div className="ap-contact-row">
                 <a className="ap-contact-btn primary" href={`mailto:${PROFILE.email}`}><Mail /> {PROFILE.email}</a>
@@ -4909,7 +4909,7 @@ function Portfolio() {
         <footer className="ap-footer">
           <PianoStrip />
           <div className="ap-footer-line">
-            Built with React <Music2 /> composed in Marbella <GitBranch /> shipping to Ireland
+            Built with React <Music2 /> composed in Marbella <GitBranch /> shipping to fantasy
           </div>
         </footer>
       </main>
