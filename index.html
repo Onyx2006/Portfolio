@@ -1378,7 +1378,7 @@ import {
   Terminal, Cpu, Database, Shield, Code2, Music2, MapPin, Mail, Github,
   Linkedin, ChevronDown, Award, GraduationCap, Briefcase, Sparkles, Camera,
   Lock, Gamepad2, Layers, Server, Globe, GitBranch, CheckCircle2, Wrench,
-  Play, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
+  Users, Play, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   TrendingUp, TrendingDown, Activity, LineChart, BarChart3, Coins,
   AlertTriangle, Bot, Gauge, Waves, ExternalLink,
 } from "lucide-react";
@@ -1547,7 +1547,7 @@ const SKILL_GROUPS = [
     title: "Systems & DevOps",
     icon: Server,
     color: "var(--circuit)",
-    items: ["Python", "Bash / Linux", "YAML", "AWS", "CI/CD pipelines"],
+    items: ["Python", "Bash / Linux", "YAML", "AWS", "Azure", "CI/CD pipelines"],
   },
   {
     id: "qa",
@@ -1555,6 +1555,13 @@ const SKILL_GROUPS = [
     icon: Wrench,
     color: "var(--amber)",
     items: ["Playwright", "Selenium", "Postman", "Cypress", "JUnit", "PHPUnit", "Jest"],
+  },
+  {
+    id: "tools & collaboration",
+    title: "Tools & Collaboration",
+    icon: Users,
+    color: "var(--violet)",
+    items: ["Git", "Github", "GitLab", "Notion", "Jira", "Slack", "Trello", "Figma", "Claude"],
   },
 ];
 
@@ -1631,6 +1638,32 @@ function TechIcon({ name }) {
       return <svg {...s}><ellipse cx="12" cy="12" rx="9.5" ry="5.5" /><path d="M6.7 10v4M6.7 10h1.3a1.3 1.3 0 0 1 0 2.6H6.7" /><path d="M11.3 10v4M11.3 10h1.3a1.3 1.3 0 0 1 0 2.6h-1.3" /><path d="m16 9.3 2.3 2.3L16 14" /></svg>;
     case "Jest":
       return <svg {...s}><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5v3M12 17.5v3M4.5 12h3M16.5 12h3M6.9 6.9l2.1 2.1M15 15l2.1 2.1M17.1 6.9 15 9M9 15l-2.1 2.1" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></svg>;
+    case "Azure":
+      return <svg {...s}><path d="M9 3h5l-6 12h9l-11 6 4-9H6Z" /></svg>;
+    case "Git":
+      return <svg {...s}><path d="M5 19 19 5" /><circle cx="6" cy="18" r="2" /><circle cx="18" cy="6" r="2" /><circle cx="12" cy="12" r="2" /><path d="M12 10 14 8M10 14 8 16" /></svg>;
+    case "Github":
+      return <Github size={13} strokeWidth={1.6} />;
+    case "GitLab":
+      return <svg {...s}><path d="M12 21 4 9.3 6.5 2l2 7.3h7L17.5 2 20 9.3Z" /></svg>;
+    case "Bitbucket":
+      return <svg {...s}><path d="M3.5 5h17l-2.6 14H6.1Z" /><path d="M9 10h6l-.9 4H9.9Z" /></svg>;
+    case "Notion":
+      return <svg {...s}><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M8 7.5v9l8-9v9" /></svg>;
+    case "Jira":
+      return <svg {...s}><path d="M12 3 19 10 12 17 5 10Z" /><path d="M12 10 16 14 12 18 8 14Z" /></svg>;
+    case "Confluence":
+      return <svg {...s}><path d="M4 15.5c4-7.5 9-9.5 16-6" /><path d="M20 8.5c-4 7.5-9 9.5-16 6" /></svg>;
+    case "Slack":
+      return <svg {...s}><rect x="9" y="2.5" width="2.6" height="7.5" rx="1.3" /><rect x="9" y="14" width="2.6" height="7.5" rx="1.3" /><rect x="2.5" y="9" width="7.5" height="2.6" rx="1.3" /><rect x="14" y="9" width="7.5" height="2.6" rx="1.3" /></svg>;
+    case "Trello":
+      return <svg {...s}><rect x="3" y="3" width="18" height="18" rx="3" /><rect x="6" y="6" width="5" height="9" rx="1" /><rect x="13" y="6" width="5" height="6" rx="1" /></svg>;
+    case "Figma":
+      return <svg {...s}><path d="M9 3h4v8H9a4 4 0 1 1 0-8Z" /><path d="M9 11h4v8a4 4 0 1 1-4-8Z" /><circle cx="15" cy="7" r="3" /></svg>;
+    case "VS Code":
+      return <svg {...s}><path d="M16 2 6 12l10 10 3-2-8-8 8-8Z" /></svg>;
+    case "Claude":
+      return <svg {...s}><path d="M12 3v18M4.5 7 19.5 17M19.5 7 4.5 17" /></svg>;
     default:
       return <Sparkles size={13} strokeWidth={1.6} />;
   }
@@ -3929,6 +3962,7 @@ function Portfolio() {
           --circuit: #4ce7b4;
           --amber: #ffb454;
           --shamrock: #2fbf76;
+          --violet: #9b8cff;
           --line: rgba(243,239,230,0.10);
           --font-display: 'Space Grotesk', sans-serif;
           --font-body: 'Inter', sans-serif;
