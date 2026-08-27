@@ -1392,6 +1392,7 @@ const PROFILE = {
   github: "https://github.com/onyx2006",
   linkedin: "https://www.linkedin.com/in/oliver-gamboa-mesa/",
   snakeGithub: "https://github.com/Onyx2006/flutter-snake",
+  agoraGithub: "https://github.com/OnyxVariables/AGORA",
   algoDashboardGithub: "https://github.com/Onyx2006/ALGO-DASHBOARD",
   algoDashboardDemo: "https://onyx2006.github.io/ALGO-DASHBOARD/",
   vertexGithub: "https://github.com/Onyx2006/Vertex",
@@ -2109,10 +2110,16 @@ const QUESTS = [
 
 const EDUCATION = [
   {
-    title: "Cybersecurity Specialization",
-    place: "Alan Turing School",
+    title: "Computer Engineering Degree",
+    place: "UNED — National University of Distance Education",
     time: "Starting Sep 2026",
     status: "upcoming",
+  },
+  {
+    title: "Cybersecurity Specialization",
+    place: "Alan Turing School",
+    time: "Postponed",
+    status: "delayed",
   },
   {
     title: "Learning & Knowledge Management",
@@ -4262,9 +4269,12 @@ function Portfolio() {
         .ap-edu-item::before { content: ''; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--ebony); border: 2px solid var(--ivory-dim); }
         .ap-edu-item.active::before { border-color: var(--circuit); background: var(--circuit); }
         .ap-edu-item.upcoming::before { border-color: var(--amber); background: var(--amber); }
+        .ap-edu-item.delayed::before { border-color: var(--amber); background: transparent; border-style: dashed; }
         .ap-edu-status { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; display: block; color: var(--ivory-dim); }
         .ap-edu-item.active .ap-edu-status { color: var(--circuit); }
         .ap-edu-item.upcoming .ap-edu-status { color: var(--amber); }
+        .ap-edu-item.delayed .ap-edu-status { color: var(--amber); }
+        .ap-edu-note { font-size: 12.5px; color: var(--ivory-dim); margin-top: 4px; font-style: italic; }
         .ap-edu-title { font-family: var(--font-display); font-weight: 600; font-size: 16.5px; margin: 0 0 3px; }
         .ap-edu-meta { font-family: var(--font-mono); font-size: 12px; color: var(--ivory-dim); }
         .ap-badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -4663,7 +4673,9 @@ function Portfolio() {
               <div className="ap-project-kicker">Boss level</div>
               <div className="ap-project-top">
                 <h3 className="ap-project-title">AGORA — On-Chain Voting, Reimagined</h3>
-                <span className="ap-lock-badge"><Lock /> Private repository</span>
+                <a className="ap-lock-badge" href={PROFILE.agoraGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
               </div>
               <p className="ap-p">
                 AGORA is a full electronic voting system built on a private, permissioned Ethereum network powered by Hyperledger Besu. Every vote is written directly to the blockchain, making results immutable and tamper-proof by design — no ballot can be altered or duplicated after the fact.
@@ -4673,9 +4685,6 @@ function Portfolio() {
               </p>
               <p className="ap-p">
                 Built as my final degree project (TFG), AGORA stitches together a whole constellation of independent microservices — each one owns its own piece of the system and can fail, restart or redeploy without taking the rest down with it. If one service drops, the others keep running without a hitch.
-              </p>
-              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
-                The project is currently kept private — it's strong enough that a commercial release is on the table, so the source isn't public yet. If you want a demo, let me know.
               </p>
               <div className="ap-tech-row">
                 {["Hyperledger Besu", "EVM", "Solidity", "Java", "Chart.js", "Immutable Ledger"].map((t) => (
@@ -4810,9 +4819,10 @@ function Portfolio() {
               <div className="ap-stats-title" style={{ marginBottom: 18 }}>Education</div>
               {EDUCATION.map((e) => (
                 <div className={`ap-edu-item ${e.status}`} key={e.title}>
-                  <span className="ap-edu-status">{e.status === "upcoming" ? "Upcoming" : e.status === "active" ? "In progress" : "Completed"}</span>
+                  <span className="ap-edu-status">{e.status === "upcoming" ? "Upcoming" : e.status === "active" ? "In progress" : e.status === "delayed" ? "Postponed" : "Completed"}</span>
                   <div className="ap-edu-title">{e.title}</div>
                   <div className="ap-edu-meta">{e.place} · {e.time}</div>
+                  {e.note && <div className="ap-edu-note">{e.note}</div>}
                 </div>
               ))}
             </div>
