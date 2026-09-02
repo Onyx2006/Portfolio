@@ -45,6 +45,14 @@ const WATER_JET_PARTICLES = 220;
 const WATER_BUBBLE_COUNT = 60;
 const WATER_DROPLET_COUNT = 80;
 
+// FX budget for the hacker-terminal planet (matrix-rain surface overlay +
+// orbiting SIEM attack nodes/beams).
+const MATRIX_RAIN_COLS = 46;
+const MATRIX_RAIN_TRAIL = 9;
+const MATRIX_RAIN_CHARSET = "01アイウエオカキクケコサシスセソ$#%&<>/\\|+=*01";
+const ATTACK_NODE_COUNT = 9;
+const ATTACK_BEAM_COUNT = 5;
+
 const PLANETS = [
   {
     id: "algorithms",
@@ -155,20 +163,20 @@ const PLANETS = [
   },
   {
     id: "hydros",
-    kicker: "Project 06 — Coming Soon",
-    name: "HYDROS",
-    color: 0x2ea7ff,
-    emissive: 0x021826,
+    kicker: "Project 06 — Cybersecurity",
+    name: "GRAVITY SIEM",
+    color: 0x2bff8a,
+    emissive: 0x02170b,
     size: 11,
     orbitA: 410,
     orbitB: 410,
     speed: 0.024,
     tilt: 0.18,
-    ocean: true,
-    hasWaterFX: true,
+    hackerTerminal: true,
+    hasAttackNodes: true,
     upcoming: true,
     description:
-      "This one is still taking shape too. Currents erupt straight off the surface in slow-arcing jets, and the whole planet drifts inside a shell of bubbles of every size — each one popping into a scatter of droplets once it floats too far out. Full details land here soon.",
+      "A mini SIEM built for both learning and real portfolio use: a detection engine, an attack simulator, and incident correlation, running fully in Docker across a React/TypeScript frontend and a FastAPI/PostgreSQL backend. Every strike orbiting the surface below is 100% simulated — no real network traffic ever leaves the sandbox. Full details land here soon.",
     tags: ["Coming Soon"],
     github: null,
   },
@@ -376,7 +384,41 @@ function buildPlanetTexture(data) {
   ctx.fillStyle = rgba(base, 1);
   ctx.fillRect(0, 0, w, h);
 
-  if (data.bands) {
+  if (data.hackerTerminal) {
+    // Dark server-chassis base instead of gas-giant blobs, plus a faint
+    // etched circuit grid so bare patches of "hull" still read as tech.
+    ctx.fillStyle = "rgba(3,10,6,1)";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = rgba(accent, 0.16);
+    ctx.lineWidth = 1;
+    const cell = 18;
+    for (let x = 0; x <= w; x += cell) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += cell) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < 46; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const r = 4 + Math.random() * 16;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, rgba(accent, 0.32));
+      grad.addColorStop(1, rgba(accent, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (data.bands) {
     const bandCount = 14;
     for (let i = 0; i < bandCount; i++) {
       const y = (i / bandCount) * h;
@@ -2732,6 +2774,261 @@ function updateVertexSurfaceCandles(group, delta) {
   updateCandleField(sc.items, delta);
 }
 
+/* GRAVITY SIEM: a live "matrix rain" terminal skin wrapped around the
+ * planet's surface */
+function createHackerTerminal(group, data) {
+  const w = 512;
+  const h = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+
+  const cols = MATRIX_RAIN_COLS;
+  const charW = w / cols;
+  const rows = Math.ceil(h / charW);
+
+  const columns = new Array(cols).fill(0).map(() => ({
+    head: -Math.random() * rows,
+    speed: 5 + Math.random() * 9,
+  }));
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const overlay = new THREE.Mesh(
+    new THREE.SphereGeometry(data.size * 1.016, 72, 72),
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.95,
+    })
+  );
+  group.add(overlay);
+
+  group.userData.hackerTerminal = { canvas, ctx, texture, columns, cols, rows, charW, w, h };
+}
+
+function updateHackerTerminal(group, delta) {
+  const ht = group.userData.hackerTerminal;
+  if (!ht) return;
+  const { ctx, columns, rows, charW, w, h } = ht;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "center";
+  ctx.font = `${Math.ceil(charW * 1.15)}px monospace`;
+
+  columns.forEach((col, ci) => {
+    col.head += col.speed * delta;
+    const x = ci * charW + charW / 2;
+
+    for (let t = 0; t < MATRIX_RAIN_TRAIL; t++) {
+      const row = Math.floor(col.head - t);
+      if (row < 0 || row > rows) continue;
+      const y = row * charW;
+      const char = MATRIX_RAIN_CHARSET[Math.floor(Math.random() * MATRIX_RAIN_CHARSET.length)];
+      if (t === 0) {
+        ctx.fillStyle = "rgba(215,255,235,0.95)"; // bright near-white head char
+      } else {
+        const alpha = Math.max(0, 1 - t / MATRIX_RAIN_TRAIL);
+        ctx.fillStyle = `rgba(40,255,130,${(alpha * 0.85).toFixed(3)})`;
+      }
+      ctx.fillText(char, x, y);
+    }
+
+    if (col.head - MATRIX_RAIN_TRAIL > rows) {
+      col.head = -Math.random() * 12;
+      col.speed = 5 + Math.random() * 9;
+    }
+  });
+
+  ht.texture.needsUpdate = true;
+}
+
+function createAttackNodes(group, data) {
+  const nodeOrbit = data.size * 1.85;
+  const glowTexture = buildGlowTexture();
+  const nodeGeometry = new THREE.SphereGeometry(data.size * 0.05, 12, 12);
+
+  const nodes = [];
+  for (let i = 0; i < ATTACK_NODE_COUNT; i++) {
+    const pos = randomOnUnitSphere().multiplyScalar(nodeOrbit);
+    const color = Math.random() < 0.4 ? 0xff3b4a : 0x39ff8a; // attacker / defender
+
+    const dot = new THREE.Mesh(
+      nodeGeometry,
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
+    );
+    dot.position.copy(pos);
+    group.add(dot);
+
+    const glow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTexture,
+        color,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    glow.scale.setScalar(data.size * 0.55);
+    dot.add(glow);
+
+    // A thin radar-style ring, tangent to the shell, that pulses outward.
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(data.size * 0.06, data.size * 0.078, 24),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), pos.clone().normalize());
+    dot.add(ring);
+
+    nodes.push({ mesh: dot, glow, ring, pos, color, pulse: Math.random() * 3 });
+  }
+
+  const beams = [];
+  for (let i = 0; i < ATTACK_BEAM_COUNT; i++) {
+    const maxPoints = 36;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(maxPoints * 3), 3));
+    geometry.setDrawRange(0, 0);
+
+    const line = new THREE.Line(
+      geometry,
+      new THREE.LineBasicMaterial({
+        color: 0xff3b4a,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    line.frustumCulled = false;
+    group.add(line);
+
+    const packet = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    packet.scale.setScalar(data.size * 0.34);
+    group.add(packet);
+
+    beams.push({
+      line,
+      packet,
+      geometry,
+      maxPoints,
+      curve: null,
+      target: null,
+      progress: 0,
+      speed: 0.5,
+      state: "idle",
+      waitTimer: Math.random() * 2.2,
+      impactTimer: 0,
+    });
+  }
+
+  group.userData.attackNodes = { nodes, beams, orbit: nodeOrbit };
+}
+
+function updateAttackNodes(group, data, delta) {
+  const an = group.userData.attackNodes;
+  if (!an) return;
+
+  an.nodes.forEach((n) => {
+    n.pulse += delta;
+    const t = (Math.sin(n.pulse * 2.4) + 1) / 2;
+    n.ring.material.opacity = t * 0.5;
+    const s = 1 + t * 1.7;
+    n.ring.scale.set(s, s, 1);
+    n.glow.material.opacity = 0.35 + t * 0.35;
+  });
+
+  an.beams.forEach((beam) => {
+    if (beam.state === "idle") {
+      beam.waitTimer -= delta;
+      if (beam.waitTimer <= 0) {
+        let source = an.nodes[Math.floor(Math.random() * an.nodes.length)];
+        let target = an.nodes[Math.floor(Math.random() * an.nodes.length)];
+        let guard = 0;
+        while (target === source && guard < 8) {
+          target = an.nodes[Math.floor(Math.random() * an.nodes.length)];
+          guard++;
+        }
+
+        const mid = source.pos.clone().add(target.pos).multiplyScalar(0.5);
+        mid.normalize().multiplyScalar(an.orbit * 1.45);
+
+        beam.curve = new THREE.QuadraticBezierCurve3(source.pos.clone(), mid, target.pos.clone());
+        beam.points = beam.curve.getPoints(beam.maxPoints - 1);
+        beam.progress = 0;
+        beam.speed = 0.45 + Math.random() * 0.5;
+        beam.target = target;
+        beam.state = "traveling";
+
+        const beamColor = source.color === 0x39ff8a ? 0x39ff8a : 0xff3b4a;
+        beam.line.material.color.set(beamColor);
+      }
+      return;
+    }
+
+    if (beam.state === "traveling") {
+      beam.progress += delta * beam.speed;
+      const t = Math.min(beam.progress, 1);
+      const visibleCount = Math.max(2, Math.floor(t * beam.maxPoints));
+
+      const posAttr = beam.geometry.attributes.position;
+      for (let i = 0; i < visibleCount; i++) {
+        const p = beam.points[i];
+        posAttr.setXYZ(i, p.x, p.y, p.z);
+      }
+      posAttr.needsUpdate = true;
+      beam.geometry.setDrawRange(0, visibleCount);
+      beam.line.material.opacity = 0.6;
+
+      const head = beam.curve.getPoint(t);
+      beam.packet.position.copy(head);
+      beam.packet.material.opacity = 1;
+
+      if (t >= 1) {
+        beam.state = "impact";
+        beam.impactTimer = 0.22;
+        beam.target.pulse = 0;
+        beam.target.ring.material.opacity = 0.95;
+      }
+      return;
+    }
+
+    if (beam.state === "impact") {
+      beam.impactTimer -= delta;
+      beam.line.material.opacity *= 0.82;
+      beam.packet.material.opacity *= 0.75;
+      if (beam.impactTimer <= 0) {
+        beam.state = "idle";
+        beam.waitTimer = 0.4 + Math.random() * 1.8;
+        beam.geometry.setDrawRange(0, 0);
+        beam.line.material.opacity = 0;
+        beam.packet.material.opacity = 0;
+      }
+    }
+  });
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -2750,6 +3047,9 @@ function createPlanets() {
     } else if (data.bands) {
       roughness = 0.55;
       metalness = 0.05;
+    } else if (data.hackerTerminal) {
+      roughness = 0.32;
+      metalness = 0.55;
     }
 
     const mesh = new THREE.Mesh(
@@ -2919,6 +3219,14 @@ function createPlanets() {
       createWaterPlanet(group, data);
     }
 
+    if (data.hackerTerminal) {
+      createHackerTerminal(group, data);
+    }
+
+    if (data.hasAttackNodes) {
+      createAttackNodes(group, data);
+    }
+
     if (data.poisonMist) {
       createPoisonMist(group, data);
     }
@@ -3010,6 +3318,14 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.waterPlanet) {
       updateWaterPlanet(group, data, delta);
+    }
+
+    if (group.userData.hackerTerminal) {
+      updateHackerTerminal(group, delta);
+    }
+
+    if (group.userData.attackNodes) {
+      updateAttackNodes(group, data, delta);
     }
 
     if (group.userData.poisonMist) {
