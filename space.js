@@ -174,11 +174,11 @@ const PLANETS = [
     tilt: 0.18,
     hackerTerminal: true,
     hasAttackNodes: true,
-    upcoming: true,
     description:
-      "A mini SIEM built for both learning and real portfolio use: a detection engine, an attack simulator, and incident correlation, running fully in Docker across a React/TypeScript frontend and a FastAPI/PostgreSQL backend. Every strike orbiting the surface below is 100% simulated — no real network traffic ever leaves the sandbox. Full details land here soon.",
-    tags: ["Coming Soon"],
-    github: null,
+      "A mini SIEM built for both learning and real portfolio use: a detection engine, an attack simulator, and incident correlation, running fully in Docker across a React/TypeScript frontend and a FastAPI/PostgreSQL backend. Every strike orbiting the surface below is 100% simulated — no real network traffic ever leaves the sandbox.",
+    tags: ["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker", "WebSockets"],
+    github: "https://github.com/Onyx2006/GravitySIEM",
+    demo: "https://onyx2006.github.io/GravitySIEM/",
   },
 ];
 
