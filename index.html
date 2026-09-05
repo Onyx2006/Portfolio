@@ -1397,6 +1397,8 @@ const PROFILE = {
   algoDashboardDemo: "https://onyx2006.github.io/ALGO-DASHBOARD/",
   vertexGithub: "https://github.com/Onyx2006/Vertex",
   vertexDemo: "https://onyx2006.github.io/Vertex/",
+  gravitySiemGithub: "https://github.com/Onyx2006/GravitySIEM",
+  gravitySiemDemo: "https://onyx2006.github.io/GravitySIEM/",
   photo: "me.jpg",
 };
 
@@ -4091,7 +4093,7 @@ function Portfolio() {
         .ap-reveal.in-view { opacity: 1; transform: translateY(0); }
         .ap-reveal.d1 { transition-delay: 0.08s; } .ap-reveal.d2 { transition-delay: 0.16s; }
         .ap-reveal.d3 { transition-delay: 0.24s; } .ap-reveal.d4 { transition-delay: 0.32s; }
-        .ap-reveal.d5 { transition-delay: 0.40s; }
+        .ap-reveal.d5 { transition-delay: 0.40s; } .ap-reveal.d6 { transition-delay: 0.48s; }
 
         /* ---------- hero ---------- */
         .ap-hero {
@@ -4801,6 +4803,37 @@ function Portfolio() {
               </p>
               <div className="ap-tech-row">
                 {["JavaScript", "Canvas2D", "CoinGecko API", "Technical Indicators", "Touch & Pointer Events", "Zero Dependencies"].map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+            </GlowBorder>
+          </div>
+
+          <div className={`ap-reveal d6 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">Achievement unlocked</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">GRAVITY SIEM — Security Monitoring, Simulated</h3>
+                <a className="ap-lock-badge" href={PROFILE.gravitySiemGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <Github /> View on GitHub
+                </a>
+              </div>
+              <div className="ap-project-links-extra">
+                <a className="ap-lock-badge" href={PROFILE.gravitySiemDemo} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <ExternalLink /> View Live Demo
+                </a>
+              </div>
+              <p className="ap-p">
+                Gravity SIEM is a mini Security Information and Event Management platform built to learn — and to show — how real detection engines work under the hood: a detection engine that scores incoming events, an attack simulator that fires realistic (and entirely synthetic) intrusion attempts, and an incident correlation layer that stitches related alerts together instead of drowning the analyst in noise.
+              </p>
+              <p className="ap-p">
+                The frontend is React + TypeScript + Vite + Tailwind, with Recharts and Leaflet turning raw events into live charts and a geo view of where each simulated attack appears to originate from. The backend is Python with FastAPI, Pydantic and WebSockets pushing events to the dashboard in real time, backed by PostgreSQL — the whole stack runs in Docker Compose, no paid cloud services required.
+              </p>
+              <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
+                Every attack you can trigger here is 100% simulated and educational — nothing ever touches a real network or a real target.
+              </p>
+              <div className="ap-tech-row">
+                {["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker", "WebSockets"].map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
