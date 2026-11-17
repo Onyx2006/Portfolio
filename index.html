@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NEW ERA</title>
-<meta name="description" content="Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist" />
+<meta name="description" content="Junior AI, DevSecOps & Blockchain Engineer" />
 <link rel="icon" href="data:," />
 <style>
   html, body { margin: 0; padding: 0; background: #080a0f; }
@@ -1385,7 +1385,7 @@ import {
 
 const PROFILE = {
   name: "Oliver Gamboa Mesa",
-  role: "Full-Stack Developer · Blockchain Engineer · Self-Taught Pianist",
+  role: "AI · DevSecOps · Blockchain Engineer",
   location: "Marbella, Spain",
   destination: "Somewhere new?",
   email: "olivergamboamesa0850@gmail.com",
@@ -1525,6 +1525,20 @@ const ATTRIBUTES = [
 
 const SKILL_GROUPS = [
   {
+    id: "devops",
+    title: "DevOps & Cloud",
+    icon: Server,
+    color: "var(--circuit)",
+    items: ["GitHub Actions", "CI/CD pipelines", "Docker", "Kubernetes", "AWS", "Azure", "Coolify", "Linux", "Bash / Linux", "YAML", "Grafana", "Loki", "Maven", "NPM"],
+  },
+  {
+    id: "security",
+    title: "Security (DevSecOps)",
+    icon: Shield,
+    color: "var(--amber)",
+    items: ["Secrets management", "Least privilege", "SonarQube", "OWASP Top 10", "Slither", "Vulnerability analysis", "Google Cybersecurity Cert."],
+  },
+  {
     id: "frontend",
     title: "Frontend",
     icon: Code2,
@@ -1536,21 +1550,21 @@ const SKILL_GROUPS = [
     title: "Backend & Data",
     icon: Database,
     color: "var(--amber)",
-    items: ["PHP", "SQL / MySQL", "PostgreSQL", "Spring Boot", "Laravel", "Symfony", "Express.js", "Next.js", "Node.js", "REST APIs", "GraphQL", "MongoDB"],
+    items: ["Python", "Java", "Node.js", "Express.js", "Next.js", "Spring Boot", "Laravel", "Symfony", "PHP", "FastAPI", "REST APIs", "GraphQL", "PostgreSQL", "SQL / MySQL", "MongoDB"],
+  },
+  {
+    id: "ai",
+    title: "AI & Automation",
+    icon: Cpu,
+    color: "var(--violet)",
+    items: ["Claude", "Cursor", "GitHub Copilot", "Ollama", "Local LLMs", "Python", "Test automation", "Microsoft 365 (advanced)"],
   },
   {
     id: "chain",
     title: "Blockchain & Smart Contracts",
     icon: Layers,
     color: "var(--circuit)",
-    items: ["Solidity", "Java (custom blockchain)", "EVM / Hyperledger Besu", "Docker", "Kubernetes"],
-  },
-  {
-    id: "systems",
-    title: "Systems & DevOps",
-    icon: Server,
-    color: "var(--circuit)",
-    items: ["Python", "Bash / Linux", "YAML", "AWS", "Azure", "CI/CD pipelines"],
+    items: ["Solidity", "EVM / Hyperledger Besu", "QBFT consensus", "Java (custom blockchain)"],
   },
   {
     id: "qa",
@@ -1560,11 +1574,11 @@ const SKILL_GROUPS = [
     items: ["Playwright", "Selenium", "Postman", "Cypress", "JUnit", "PHPUnit", "Jest"],
   },
   {
-    id: "tools & collaboration",
+    id: "tools",
     title: "Tools & Collaboration",
     icon: Users,
     color: "var(--violet)",
-    items: ["Git", "Github", "GitLab", "Notion", "Jira", "Slack", "Trello", "Figma", "Claude"],
+    items: ["Git", "Github", "GitLab", "Jira", "Notion", "Scrum", "Slack", "Trello", "Figma"],
   },
 ];
 
@@ -2089,13 +2103,30 @@ const QUESTS = [
   {
     company: "Unknown Gravity",
     place: "Málaga",
-    role: "Full-Stack Developer & QA Intern",
+    role: "Full-Stack Developer & QA — Tokenization SaaS",
     time: "Mar 2026 – Jun 2026",
     bullets: [
-      "Ran QA passes using Postman, Playwright, Selenium, Slither and OWASP methodology.",
-      "Worked as a fullstack developer building a SaaS platform for tokenizing financial assets.",
+      "Designed CI/CD pipelines with GitHub Actions: when the tests pass, the code deploys to Coolify automatically — no manual steps between a merged commit and production.",
+      "Centralised credentials in a dedicated secrets-management tool, applying least privilege and getting rid of loose .env files.",
+      "Automated functional and API test suites (Playwright, Selenium, Postman) as the quality gate before every deploy.",
+      "Ran security testing on the platform and its smart contracts — OWASP methodology and Slither static analysis — and used SonarQube to enforce code-quality standards.",
+      "Built full-stack features for a SaaS platform that tokenizes financial assets; planned the work in Notion.",
     ],
-    tags: ["QA", "Security", "Fullstack", "SaaS"],
+    tags: ["CI/CD", "GitHub Actions", "Coolify", "Secrets Management", "Playwright", "Slither", "OWASP", "SonarQube"],
+  },
+  {
+    company: "AGORA — Final Degree Project",
+    place: "Academic",
+    role: "Full-Stack, Blockchain & Infrastructure Engineer",
+    time: "Nov 2025 – May 2026",
+    bullets: [
+      "Deployed a permissioned Hyperledger Besu network (QBFT consensus) on AWS: several nodes on separate EC2 instances, run with Docker and Kubernetes.",
+      "Owned the network layer end to end — public and private IPs, node-to-node connectivity and clock synchronisation across instances.",
+      "Diagnosed and fixed production failures on my own, including the sync and communication problems that only show up in distributed systems.",
+      "Built the observability from scratch with Grafana and Loki: dashboards for network health, block production and logs.",
+      "Designed a decoupled e-voting system (React front end, Laravel back end) integrated with the chain for traceable, tamper-evident votes; used SonarQube for code quality and Jira to plan the project.",
+    ],
+    tags: ["AWS EC2", "Kubernetes", "Docker", "Hyperledger Besu", "QBFT", "Grafana", "Loki", "React", "Laravel"],
   },
   {
     company: "Vicox Legal",
@@ -2103,50 +2134,25 @@ const QUESTS = [
     role: "Blockchain Intern",
     time: "Feb 2025 – Apr 2025",
     bullets: [
-      "Worked hands-on with Bitcoin hashes and electronic certificates.",
-      "Designed and built a basic blockchain to test and validate transactions between wallets.",
+      "Built a basic blockchain from scratch in Java — wallets, transaction validation and data integrity through hashing — and deployed it on AWS.",
+      "Worked with Bitcoin hashes and electronic certificates to understand how verification and digital trust are enforced cryptographically.",
     ],
-    tags: ["Blockchain", "Bitcoin", "Cryptography"],
+    tags: ["Java", "Blockchain", "Cryptography", "AWS"],
   },
 ];
 
 const EDUCATION = [
-  {
-    title: "Computer Engineering Degree",
-    place: "UNED — National University of Distance Education",
-    time: "Starting Sep 2026",
-    status: "upcoming",
-  },
-  {
-    title: "Cybersecurity Specialization",
-    place: "Alan Turing School",
-    time: "Postponed",
-    status: "delayed",
-  },
-  {
-    title: "Learning & Knowledge Management",
-    place: "Online",
-    time: "Jun 2026 – Sep 2026",
-    status: "active",
-  },
-  {
-    title: "DAW — Web Application Development",
-    place: "I.E.S Salduba, San Pedro de Alcántara",
-    time: "Sep 2024 – Sep 2026",
-    status: "DONE",
-  },
-  {
-    title: "Science Baccalaureate",
-    place: "I.E.S Salduba, San Pedro de Alcántara",
-    time: "Sep 2022 – May 2024",
-    status: "done",
-  },
+  { title: "Computer Engineering Degree", place: "UNED — National University of Distance Education", time: "Since Oct 2026", status: "active" },
+  { title: "Cybersecurity Specialization", place: "Alan Turing School", time: "Postponed", status: "delayed" },
+  { title: "Learning & Knowledge Management", place: "Online", time: "Jun 2026 – Sep 2026", status: "done" },
+  { title: "DAW — Web Application Development", place: "I.E.S Salduba, San Pedro de Alcántara", time: "Sep 2024 – May 2026", status: "done" },
+  { title: "Science Baccalaureate", place: "I.E.S Salduba, San Pedro de Alcántara", time: "Sep 2022 – May 2024", status: "done" },
 ];
 
 const BADGES = [
   { title: "Google Cybersecurity Certificate", year: "2026", icon: Shield },
+  { title: "Cambridge English B2", year: "2026", icon: Globe },
   { title: "AI Fundamentals Certification", year: "2022", icon: Cpu },
-  { title: "Cambridge English B1 (working at B2)", year: "2023", icon: Globe },
   { title: "Lifeguard, First Aid & AED Training", year: "2023", icon: Award },
   { title: "Driving Licenses — B & A1", year: "2024", icon: CheckCircle2 },
 ];
@@ -4535,8 +4541,8 @@ function Portfolio() {
             <p className="ap-role">{PROFILE.role}</p>
             <div className="ap-hud">
               <span className="ap-hud-chip"><MapPin /> {PROFILE.location} → {PROFILE.destination}</span>
-              <span className="ap-hud-chip"><Sparkles /> Open to opportunities</span>
-              <span className="ap-hud-chip"><Terminal /> Class: Full-Stack / Blockchain</span>
+              <span className="ap-hud-chip"><Sparkles /> Open to: DevOps · DevSecOps · AI engineer</span>
+              <span className="ap-hud-chip"><Terminal /> Remote or on-site · Open to relocation · English B2</span>
             </div>
             <button className="ap-scroll-cue" onClick={() => scrollTo("about")}>
               Continue <ChevronDown size={15} />
@@ -4576,16 +4582,19 @@ function Portfolio() {
           <div className="ap-about-grid">
             <div className={`ap-reveal d1 ${visited.has("about") ? "in-view" : ""}`}>
               <p className="ap-lede">
-                I move comfortably between transactional databases, a custom blockchain written in Java, and a piano keyboard I taught myself to play.
+                I build software, ship it automatically and watch it run in production — from React front ends to Kubernetes clusters on AWS.
               </p>
               <p className="ap-p">
-                Different instruments, same instinct: take something complex, understand it from the inside, and turn it into something real. Being self-taught — in code and in music — means I built my own process for learning fast, sitting with hard problems until they click, and shipping.
+                At Unknown Gravity I built CI/CD pipelines that deploy on green tests with zero manual steps, and ran security testing on a financial tokenization platform. For my final project, AGORA, I operated a multi-node Hyperledger Besu network on AWS, debugged clock-sync and connectivity failures in production, and monitored it with Grafana and Loki.
               </p>
               <p className="ap-p">
-                That range shows up in the work: object-oriented systems, game design in Unreal Engine, Linux server administration, AWS deployments, tokenized equity platforms, and permissioned EVM networks running on Besu.
+                I treat security as part of delivery, not an afterthought: least-privilege secrets, SonarQube, OWASP and Slither. I built Gravity SIEM to understand detection from the inside, and AInalyzer to test how local LLMs can help verify vulnerabilities.
               </p>
               <p className="ap-p">
-                I'm looking for a place where technology, creativity and genuine craftsmanship meet — where I can help build things that matter, and that don't feel like anyone could have made them.
+                I work with AI tools every day (Claude, Cursor, Copilot) to move much faster — but I review, test and validate everything they produce. Self-taught in code and in music, I learn quickly, sit with hard problems until they click, and ship.
+              </p>
+              <p className="ap-p">
+                I’m looking for a junior DevOps, DevSecOps or AI engineer role where I can keep growing next to experienced people — remote or on-site, and open to relocating.
               </p>
             </div>
             <div className={`ap-reveal d2 ${visited.has("about") ? "in-view" : ""}`}>
@@ -4680,16 +4689,36 @@ function Portfolio() {
                 </a>
               </div>
               <p className="ap-p">
-                AGORA is a full electronic voting system built on a private, permissioned Ethereum network powered by Hyperledger Besu. Every vote is written directly to the blockchain, making results immutable and tamper-proof by design — no ballot can be altered or duplicated after the fact.
+                AGORA is a full electronic voting system on a private, permissioned Ethereum network powered by Hyperledger Besu (QBFT consensus). Every vote is written to the chain, so results are immutable and tamper-evident by design.
               </p>
               <p className="ap-p">
-                On top of the chain sits a live analytics layer built with Chart.js, turning raw voting data into heatmaps, pie breakdowns and bar comparisons that update as results come in.
+                Beyond the app, the real challenge was running it: several validator nodes on separate AWS EC2 instances, orchestrated with Docker and Kubernetes, with public/private networking, clock synchronisation and a Grafana + Loki stack to watch network health and block production. When nodes stopped syncing, I tracked down the cause and fixed it myself.
               </p>
               <p className="ap-p">
-                Built as my final degree project (TFG), AGORA stitches together a whole constellation of independent microservices — each one owns its own piece of the system and can fail, restart or redeploy without taking the rest down with it. If one service drops, the others keep running without a hitch.
+                On top sits a decoupled React + Laravel application and a live analytics layer built with Chart.js — heatmaps, pie breakdowns and bar comparisons that update as results come in. Built as my final degree project (TFG).
               </p>
               <div className="ap-tech-row">
-                {["Hyperledger Besu", "EVM", "Solidity", "Java", "Chart.js", "Immutable Ledger"].map((t) => (
+                {["Hyperledger Besu", "QBFT", "AWS EC2", "Kubernetes", "Docker", "Grafana", "Loki", "React", "Laravel", "Solidity"].map((t) => (
+                  <span className="ap-tag" key={t}>{t}</span>
+                ))}
+              </div>
+            </GlowBorder>
+          </div>
+
+          <div className={`ap-reveal d2 ${visited.has("projects") ? "in-view" : ""}`}>
+            <GlowBorder radius={16} className="ap-project-card">
+              <div className="ap-project-kicker">AI × Security</div>
+              <div className="ap-project-top">
+                <h3 className="ap-project-title">AInalyzer — Web Vulnerability Analysis with Local LLMs</h3>
+              </div>
+              <p className="ap-p">
+                An experimental tool that uses Ollama and local language models to analyse web applications against the OWASP Top 10 categories — with no data leaving the machine.
+              </p>
+              <p className="ap-p">
+                The interesting part is the loop: findings from the first pass drive additional automated checks, and the tool then tries to reproduce each potential vulnerability before reporting it — an attempt to cut down on false positives, which is where LLM-based scanners usually fall apart.
+              </p>
+              <div className="ap-tech-row">
+                {["Python", "Ollama", "LLMs", "OWASP Top 10", "Security Automation"].map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
@@ -4833,7 +4862,7 @@ function Portfolio() {
                 Every attack you can trigger here is 100% simulated and educational — nothing ever touches a real network or a real target.
               </p>
               <div className="ap-tech-row">
-                {["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker", "WebSockets"].map((t) => (
+                {["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker Compose", "GitHub Actions", "WebSockets"].map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
