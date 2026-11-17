@@ -1557,7 +1557,7 @@ const SKILL_GROUPS = [
     title: "AI & Automation",
     icon: Cpu,
     color: "var(--violet)",
-    items: ["Claude", "Cursor", "GitHub Copilot", "Ollama", "Local LLMs", "Python", "Test automation", "Microsoft 365 (advanced)"],
+    items: ["Claude", "Cursor", "GitHub Copilot", "Ollama", "Local LLMs", "Python", "Test automation", "Microsoft 365 (advanced)", "RAG", "Chroma", "Embeddings"],
   },
   {
     id: "chain",
@@ -1681,6 +1681,8 @@ function TechIcon({ name }) {
       return <svg {...s}><path d="M16 2 6 12l10 10 3-2-8-8 8-8Z" /></svg>;
     case "Claude":
       return <svg {...s}><path d="M12 3v18M4.5 7 19.5 17M19.5 7 4.5 17" /></svg>;
+    case "Chroma":
+      return <Database size={13} strokeWidth={1.6} />;
     default:
       return <Sparkles size={13} strokeWidth={1.6} />;
   }
@@ -4717,8 +4719,11 @@ function Portfolio() {
               <p className="ap-p">
                 The interesting part is the loop: findings from the first pass drive additional automated checks, and the tool then tries to reproduce each potential vulnerability before reporting it — an attempt to cut down on false positives, which is where LLM-based scanners usually fall apart.
               </p>
+              <p className="ap-p">
+                Under the hood it uses retrieval-augmented generation (RAG): every finding is embedded with a local Ollama embedding model and stored in a Chroma vector database, together with its URL, vulnerability type, score and timestamp. On later passes the tool retrieves the most similar past findings and feeds them back to the model as context, so each new check builds on what it has already found — all running locally.
+              </p>
               <div className="ap-tech-row">
-                {["Python", "Ollama", "LLMs", "OWASP Top 10", "Security Automation"].map((t) => (
+                {["Python", "Ollama", "LLMs", "RAG", "Chroma", "Embeddings", "OWASP Top 10", "Security Automation"].map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
