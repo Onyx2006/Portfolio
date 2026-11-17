@@ -4725,27 +4725,34 @@ function Portfolio() {
             </GlowBorder>
           </div>
 
-          <div className={`ap-reveal d2 ${visited.has("projects") ? "in-view" : ""}`}>
+          <div className={`ap-reveal d6 ${visited.has("projects") ? "in-view" : ""}`}>
             <GlowBorder radius={16} className="ap-project-card">
-              <div className="ap-project-kicker">Side quest</div>
+              <div className="ap-project-kicker">Achievement unlocked</div>
               <div className="ap-project-top">
-                <h3 className="ap-project-title">Snake — Grow, Don't Stop</h3>
-                <a className="ap-lock-badge" href={PROFILE.snakeGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                <h3 className="ap-project-title">GRAVITY SIEM — Security Monitoring, Simulated</h3>
+                <a className="ap-lock-badge" href={PROFILE.gravitySiemGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
                   <Github /> View on GitHub
                 </a>
               </div>
+              <div className="ap-project-links-extra">
+                <a className="ap-lock-badge" href={PROFILE.gravitySiemDemo} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <ExternalLink /> View Live Demo
+                </a>
+              </div>
               <p className="ap-p">
-                A classic worm-eats-apples game built natively in Flutter — smooth animations, a growing snake body, collision detection and a live scoreboard, all running as a cross-platform mobile app. Originally built as a project for my DAW (Desarrollo de Aplicaciones Web) studies.
+                Gravity SIEM is a mini Security Information and Event Management platform built to learn — and to show — how real detection engines work under the hood: a detection engine that scores incoming events, an attack simulator that fires realistic (and entirely synthetic) intrusion attempts, and an incident correlation layer that stitches related alerts together instead of drowning the analyst in noise.
+              </p>
+              <p className="ap-p">
+                The frontend is React + TypeScript + Vite + Tailwind, with Recharts and Leaflet turning raw events into live charts and a geo view of where each simulated attack appears to originate from. The backend is Python with FastAPI, Pydantic and WebSockets pushing events to the dashboard in real time, backed by PostgreSQL — the whole stack runs in Docker Compose, no paid cloud services required.
               </p>
               <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
-                Since you're already here: the board below plays by the exact same rules as the Flutter app — move, eat, grow, don't hit a wall or yourself — rebuilt with canvas so it runs in the browser. The real native Flutter source is on GitHub.
+                Every attack you can trigger here is 100% simulated and educational — nothing ever touches a real network or a real target.
               </p>
               <div className="ap-tech-row">
-                {SNAKE_TAGS.map((t) => (
+                {["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker Compose", "GitHub Actions", "WebSockets"].map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
-              <SnakeGame />
             </GlowBorder>
           </div>
 
@@ -4838,34 +4845,27 @@ function Portfolio() {
             </GlowBorder>
           </div>
 
-          <div className={`ap-reveal d6 ${visited.has("projects") ? "in-view" : ""}`}>
+          <div className={`ap-reveal d2 ${visited.has("projects") ? "in-view" : ""}`}>
             <GlowBorder radius={16} className="ap-project-card">
-              <div className="ap-project-kicker">Achievement unlocked</div>
+              <div className="ap-project-kicker">Side quest</div>
               <div className="ap-project-top">
-                <h3 className="ap-project-title">GRAVITY SIEM — Security Monitoring, Simulated</h3>
-                <a className="ap-lock-badge" href={PROFILE.gravitySiemGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                <h3 className="ap-project-title">Snake — Grow, Don't Stop</h3>
+                <a className="ap-lock-badge" href={PROFILE.snakeGithub} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
                   <Github /> View on GitHub
                 </a>
               </div>
-              <div className="ap-project-links-extra">
-                <a className="ap-lock-badge" href={PROFILE.gravitySiemDemo} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                  <ExternalLink /> View Live Demo
-                </a>
-              </div>
               <p className="ap-p">
-                Gravity SIEM is a mini Security Information and Event Management platform built to learn — and to show — how real detection engines work under the hood: a detection engine that scores incoming events, an attack simulator that fires realistic (and entirely synthetic) intrusion attempts, and an incident correlation layer that stitches related alerts together instead of drowning the analyst in noise.
-              </p>
-              <p className="ap-p">
-                The frontend is React + TypeScript + Vite + Tailwind, with Recharts and Leaflet turning raw events into live charts and a geo view of where each simulated attack appears to originate from. The backend is Python with FastAPI, Pydantic and WebSockets pushing events to the dashboard in real time, backed by PostgreSQL — the whole stack runs in Docker Compose, no paid cloud services required.
+                A classic worm-eats-apples game built natively in Flutter — smooth animations, a growing snake body, collision detection and a live scoreboard, all running as a cross-platform mobile app. Originally built as a project for my DAW (Desarrollo de Aplicaciones Web) studies.
               </p>
               <p className="ap-p" style={{ color: "var(--ivory-dim)", fontSize: "13.5px" }}>
-                Every attack you can trigger here is 100% simulated and educational — nothing ever touches a real network or a real target.
+                Since you're already here: the board below plays by the exact same rules as the Flutter app — move, eat, grow, don't hit a wall or yourself — rebuilt with canvas so it runs in the browser. The real native Flutter source is on GitHub.
               </p>
               <div className="ap-tech-row">
-                {["React", "TypeScript", "FastAPI", "PostgreSQL", "Docker Compose", "GitHub Actions", "WebSockets"].map((t) => (
+                {SNAKE_TAGS.map((t) => (
                   <span className="ap-tag" key={t}>{t}</span>
                 ))}
               </div>
+              <SnakeGame />
             </GlowBorder>
           </div>
         </section>
