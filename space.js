@@ -180,6 +180,22 @@ const PLANETS = [
     github: "https://github.com/Onyx2006/GravitySIEM",
     demo: "https://onyx2006.github.io/GravitySIEM/",
   },
+  {
+    id: "ainalyzer",
+    kicker: "Project 07 — AI × Security",
+    name: "AINALYZER",
+    color: 0xff4fd8,
+    emissive: 0x2a0626,
+    size: 10,
+    orbitA: 470,
+    orbitB: 470,
+    speed: 0.014,
+    tilt: -0.25,
+    hasAIScanner: true,
+    description:
+      "An experimental AI security analyst: local LLMs (Ollama) analyse web apps against the OWASP Top 10, chain follow-up checks from what they find, and try to reproduce every potential vulnerability before reporting it, to cut false positives. A RAG layer — local embeddings stored in Chroma — recalls similar past findings to guide each new pass. Only ever tested on targets with explicit permission, such as OWASP Juice Shop in Docker and authorised bug-bounty scopes.",
+    tags: ["Python", "Ollama", "LLMs", "RAG", "Chroma", "OWASP Top 10"],
+  },
 ];
 
 /* 2. STATE */
@@ -3029,6 +3045,151 @@ function updateAttackNodes(group, data, delta) {
   });
 }
 
+/* AINALYZER planet — AI x security. Three layered effects:
+   1) a neural-network lattice with signals firing along its edges,
+   2) a scanner ring that sweeps the surface; each vulnerability it hits is
+      flagged, "re-tested" by an expanding verification ring, then either
+      confirmed (red report beam) or dismissed as a false positive,
+   3) an orbiting vector-space cloud (the RAG memory): now and then a point is
+      queried and its nearest neighbours light up as retrieved context. */
+function createAIScanner(group, data) {
+  const R = data.size;
+  const glowTex = buildGlowTexture();
+  const fib = (i, n) => {
+    const y = 1 - (2 * (i + 0.5)) / n, r = Math.sqrt(1 - y * y), phi = i * 2.399963;
+    return new THREE.Vector3(Math.cos(phi) * r, y, Math.sin(phi) * r);
+  };
+  const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
+
+  // 1) neural lattice
+  const N = 64, shell = [];
+  for (let i = 0; i < N; i++) shell.push(fib(i, N).multiplyScalar(R * 1.14));
+  const edgeSet = new Set(), edges = [];
+  shell.forEach((p, i) => {
+    shell.map((q, j) => ({ j, d: i === j ? 1e9 : p.distanceTo(q) })).sort((a, b) => a.d - b.d).slice(0, 3).forEach(({ j }) => {
+      const k = Math.min(i, j) + "-" + Math.max(i, j);
+      if (!edgeSet.has(k)) { edgeSet.add(k); edges.push([i, j]); }
+    });
+  });
+  const eg = new THREE.BufferGeometry().setFromPoints(edges.flatMap(([a, b]) => [shell[a], shell[b]]));
+  group.add(new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0xff6ae6, opacity: 0.28, ...additive })));
+  group.add(new THREE.Points(new THREE.BufferGeometry().setFromPoints(shell),
+    new THREE.PointsMaterial({ color: 0xffb3f2, size: R * 0.09, map: glowTex, opacity: 0.9, ...additive })));
+  const P = 30, pulses = [], pPos = new Float32Array(P * 3);
+  for (let i = 0; i < P; i++) pulses.push({ e: (Math.random() * edges.length) | 0, t: Math.random(), s: 0.4 + Math.random() * 0.7 });
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+  const pPoints = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x7ffcff, size: R * 0.16, map: glowTex, ...additive }));
+  pPoints.frustumCulled = false;
+  group.add(pPoints);
+
+  // 2) scanner ring + vulnerability hotspots
+  const scanner = new THREE.Mesh(new THREE.TorusGeometry(R * 1.035, R * 0.012, 8, 96),
+    new THREE.MeshBasicMaterial({ color: 0x7ffcff, opacity: 0.95, ...additive }));
+  scanner.add(new THREE.Mesh(new THREE.TorusGeometry(R * 1.035, R * 0.06, 8, 96),
+    new THREE.MeshBasicMaterial({ color: 0x7ffcff, opacity: 0.1, ...additive })));
+  group.add(scanner);
+  const hotspots = [];
+  for (let i = 0; i < 8; i++) {
+    const dir = randomOnUnitSphere();
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffb02e, opacity: 0, ...additive }));
+    glow.position.copy(dir).multiplyScalar(R * 1.03);
+    group.add(glow);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(R * 0.05, R * 0.066, 28),
+      new THREE.MeshBasicMaterial({ color: 0x7ffcff, opacity: 0, side: THREE.DoubleSide, ...additive }));
+    ring.position.copy(dir).multiplyScalar(R * 1.03);
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    group.add(ring);
+    const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([dir.clone().multiplyScalar(R * 1.03), dir.clone().multiplyScalar(R * 2.1)]),
+      new THREE.LineBasicMaterial({ color: 0xff3b4a, opacity: 0, ...additive }));
+    group.add(beam);
+    hotspots.push({ dir, glow, ring, beam, phase: "idle", t: 0, real: true });
+  }
+
+  // 3) vector-space cloud (RAG memory)
+  const cloud = new THREE.Group();
+  const M = 96, cPos = new Float32Array(M * 3), cCol = new Float32Array(M * 3), cBase = new Float32Array(M * 3), cFlash = new Float32Array(M);
+  const centers = [0, 1, 2, 3].map((i) => fib(i * 5 + 1, 20).multiplyScalar(R * 2.6));
+  const palette = [new THREE.Color(0xb48cff), new THREE.Color(0x7ffcff), new THREE.Color(0xff8ae6), new THREE.Color(0xffd98a)];
+  for (let i = 0; i < M; i++) {
+    const c = i % 4, p = centers[c].clone().add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(R * 1.3));
+    cPos.set([p.x, p.y, p.z], i * 3);
+    cBase.set([palette[c].r * 0.55, palette[c].g * 0.55, palette[c].b * 0.55], i * 3);
+  }
+  const cGeo = new THREE.BufferGeometry();
+  cGeo.setAttribute("position", new THREE.BufferAttribute(cPos, 3));
+  cGeo.setAttribute("color", new THREE.BufferAttribute(cCol, 3));
+  cloud.add(new THREE.Points(cGeo, new THREE.PointsMaterial({ size: R * 0.13, map: glowTex, vertexColors: true, opacity: 0.95, ...additive })));
+  const qGeo = new THREE.BufferGeometry();
+  qGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(5 * 2 * 3), 3));
+  const qLines = new THREE.LineSegments(qGeo, new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0, ...additive }));
+  qLines.frustumCulled = false;
+  cloud.add(qLines);
+  group.add(cloud);
+
+  group.userData.aiScanner = { R, edges, shell, pulses, pPos, pGeo, scanner, hotspots, cloud, M, cPos, cCol, cBase, cFlash, qGeo, qLines, nextQuery: 1.5, queryT: 9 };
+}
+
+function updateAIScanner(group, delta, elapsed) {
+  const s = group.userData.aiScanner, R = s.R;
+  const v = new THREE.Vector3(), n = new THREE.Vector3(0, 0, 1);
+
+  s.pulses.forEach((p, i) => {
+    p.t += delta * p.s;
+    if (p.t > 1) { p.t = 0; p.e = (Math.random() * s.edges.length) | 0; }
+    const [a, b] = s.edges[p.e];
+    v.copy(s.shell[a]).lerp(s.shell[b], p.t);
+    s.pPos.set([v.x, v.y, v.z], i * 3);
+  });
+  s.pGeo.attributes.position.needsUpdate = true;
+
+  s.scanner.rotation.set(elapsed * 0.55, elapsed * 0.21, 0);
+  n.set(0, 0, 1).applyQuaternion(s.scanner.quaternion);
+  s.hotspots.forEach((h) => {
+    h.t += delta;
+    const m = h.glow.material, rm = h.ring.material, bm = h.beam.material;
+    if (h.phase === "idle") {
+      m.opacity = Math.max(0, m.opacity - delta * 2); rm.opacity = 0; bm.opacity = Math.max(0, bm.opacity - delta * 2);
+      if (Math.abs(n.dot(h.dir)) < 0.05) { h.phase = "detected"; h.t = 0; h.real = Math.random() < 0.55; m.color.set(0xffb02e); }
+    } else if (h.phase === "detected") {
+      m.opacity = 0.6 + Math.sin(h.t * 18) * 0.35; h.glow.scale.setScalar(R * (0.35 + h.t * 0.15));
+      if (h.t > 1.1) { h.phase = "verifying"; h.t = 0; }
+    } else if (h.phase === "verifying") {
+      const k = Math.min(1, h.t / 1.3);
+      h.ring.scale.setScalar(1 + k * 3.5); rm.opacity = (1 - k) * 0.95; m.opacity = 0.7;
+      if (h.t > 1.3) { h.phase = h.real ? "confirmed" : "dismissed"; h.t = 0; m.color.set(h.real ? 0xff3b4a : 0x8a93a6); }
+    } else if (h.phase === "confirmed") {
+      m.opacity = 0.9; h.glow.scale.setScalar(R * 0.5); bm.opacity = Math.min(1, h.t * 3) * 0.9;
+      if (h.t > 2.6) { h.phase = "idle"; h.t = 0; }
+    } else {
+      m.opacity = Math.max(0, 0.7 - h.t * 0.9);
+      if (h.t > 0.9) { h.phase = "idle"; h.t = 0; }
+    }
+  });
+
+  s.cloud.rotation.y += delta * 0.12;
+  s.cloud.rotation.x = Math.sin(elapsed * 0.15) * 0.2;
+  s.nextQuery -= delta; s.queryT += delta;
+  if (s.nextQuery <= 0) {
+    s.nextQuery = 3.4;
+    s.queryT = 0;
+    const q = (Math.random() * s.M) | 0, qp = new THREE.Vector3().fromArray(s.cPos, q * 3);
+    const near = Array.from({ length: s.M }, (_, i) => ({ i, d: i === q ? 1e9 : qp.distanceToSquared(v.fromArray(s.cPos, i * 3)) }))
+      .sort((a, b) => a.d - b.d).slice(0, 5);
+    const arr = s.qGeo.attributes.position.array;
+    near.forEach(({ i }, k) => { arr.set([qp.x, qp.y, qp.z], k * 6); arr.set(s.cPos.subarray(i * 3, i * 3 + 3), k * 6 + 3); s.cFlash[i] = 1; });
+    s.cFlash[q] = 1.4;
+    s.qGeo.attributes.position.needsUpdate = true;
+  }
+  s.qLines.material.opacity = Math.max(0, 0.8 - s.queryT * 0.45);
+  for (let i = 0; i < s.M; i++) {
+    s.cFlash[i] = Math.max(0, s.cFlash[i] - delta * 0.6);
+    const f = s.cFlash[i];
+    s.cCol[i * 3] = s.cBase[i * 3] + f; s.cCol[i * 3 + 1] = s.cBase[i * 3 + 1] + f; s.cCol[i * 3 + 2] = s.cBase[i * 3 + 2] + f;
+  }
+  s.cloud.children[0].geometry.attributes.color.needsUpdate = true;
+}
+
 function createPlanets() {
   PLANETS.forEach((data) => {
     const group = new THREE.Group();
@@ -3251,6 +3412,10 @@ function createPlanets() {
       createVertexSurfaceCandles(group, data);
     }
 
+    if (data.hasAIScanner) {
+      createAIScanner(group, data);
+    }
+
     group.userData.data = data;
     group.userData.angle = Math.random() * Math.PI * 2;
     group.rotation.x = data.tilt;
@@ -3350,6 +3515,10 @@ function updatePlanets(delta, elapsed) {
 
     if (group.userData.vertexSurfaceCandles) {
       updateVertexSurfaceCandles(group, delta);
+    }
+
+    if (group.userData.aiScanner) {
+      updateAIScanner(group, delta, elapsed);
     }
 
     // Hover feedback: scale up + brighter emissive/atmosphere + the
